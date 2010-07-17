@@ -1,0 +1,7 @@
+
+Markup to generate UML diagrams with http://yuml.me
+----------------------------------------------------
+
+[Asset Server]+1->+1[AssetMeta]
+[AssetMeta]++1-meta >+1[AssetBody]
+[AssetMeta]++1-assembly >+1[AssetAssembly]
