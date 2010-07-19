@@ -18,7 +18,7 @@ exports.init = function() {
 
             /* Load source file
              */
-            require('../../utils/loader').load({
+            require('../../../lib/loader').load({
                 url: assetParams.sourceURL
             },
                 /*
@@ -68,7 +68,7 @@ var ColladaParser = function(sceneJSONBuilder) {  // Constructor
         };
         this._attachments = [];
         var self = this;
-        require('../../utils/domParserB').parseXMLToDOM(xml, function(doc) {
+        require('../../../lib/glge_xmlparser').parseXMLToDOM(xml, function(doc) {
             self._xmlDoc = doc;
             self._buildIdMap();
             self._parseDocument(callback);
