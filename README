@@ -1,9 +1,0 @@
-An experimental asset server for SceneJS on Node.js and CouchDB.
-
-The server will be able to fetch files in various formats like COLLADA, OBJ etc, parse them and warehouses
-them as SceneJS JSON for quick and easy download and integration into scene graphs.
-
-The server will support query of asset metadata, and download through either HTTP or WebSocket protocol. Using the
-latter, a SceneJS.Socket node will be able to dynamically pull in live content from the server.
-
-More info at: http://scenejs.wikispaces.com/Asset+Server

@@ -1,7 +1,3 @@
-/*
- * WebSocket front-end for the asset service 
- */
-
 var sys = require("sys");
 var log = require('../lib/log').log;
 var ws = require('../lib/ws');
@@ -9,15 +5,34 @@ var assetService = require('./assetService');
 var url = require('url');
 var qs = require('querystring');
 
-const HOST = "localhost";
-const PORT = 8888;
+function USAGE(message) {
+    var error_code = 0;
+    sys.puts("\n  USAGE: node runServer.js HOST PORT\n\n" +
+             "  Run the SceneJS Asset Server.\n" +
+             "\b\n" +
+             "  Example:\n\t\tnode runServer.js http://localhost 8888\n\n");
+
+    if (message !== undefined) {
+        sys.puts(message);
+        error_code = 1;
+    }
+    process.exit(error_code);
+}
+
+if (process.argv.length < 3) {
+    USAGE();
+}
+
+const HOST = process.argv[2];
+const PORT = process.argv[3];
+
 
 var server = ws.createServer({
     debug: false
 });
 
 server.addListener("listening", function() {
-    log("Asset Server listening for connections on " + HOST + ":" + PORT);
+    log("SceneJS Asset Server listening for connections on " + HOST + ":" + PORT);
 });
 
 // Handle WebSocket Requests
@@ -32,17 +47,17 @@ server.addListener("connection", function(conn) {
                                     params,
                                     function (result) {
                                         if (result.error) {
-                                            log("<" + conn._id + "> ERROR handling request: " + result.error + " : " + result.body);
+                                            //log("<" + conn._id + "> ERROR handling request: " + result.error + " : " + result.body);
                                             server.send(conn._id, JSON.stringify(result));
                                         } else {
                                             var jsonStr = JSON.stringify(result);
-                                            log("<" + conn._id + "> success handling request - response has " + jsonStr.length + " chars");
+                                            //  log("<" + conn._id + "> success handling request - response has " + jsonStr.length + " chars");
                                             server.send(conn._id, jsonStr);
                                         }
                                     });
                         },
                         function(error) {
-                            log("<" + conn._id + "> ERROR handling request: " + error.error + " : " + error.message);
+                            // log("<" + conn._id + "> ERROR handling request: " + error.error + " : " + error.message);
                             server.send(JSON.stringify(error));
                         });
             });
@@ -83,16 +98,5 @@ server.addListener("request", function(req, res) {
 server.addListener("shutdown", function(conn) {
     log("Server shutdown"); // never actually happens, because I never tell the server to shutdown.
 });
-
-
-//function paramsToJSON(params) {
-//    var jsonParams = {};
-//    for (var key in params) {
-//        if (params.hasOwnProperty(key)) {
-//            jsonParams[key] = params[key];
-//        }
-//    }
-//}
-
 
 server.listen(PORT, HOST);

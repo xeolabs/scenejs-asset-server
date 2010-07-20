@@ -1,20 +1,21 @@
 var builders = require('./builders/builder-registry');
 
-require('./builders/dae/collada-builder').init();
-require('./builders/bvh/bvh-builder').init();
-require('./builders/mtl/mtl-builder').init();
-require('./builders/obj/obj-builder').init();
+require('./builders/collada-builder').init();
 
 var sys = require("sys");
 var log = require('../../lib/log').log;
+var http = require("http");
+var url = require("url");
+var Buffer = require("buffer").Buffer;
+var uuid = require('../../lib/uuid');
 
 
 // Node-CouchDB: http://github.com/felixge/node-couchdb
 var couchdb = require('../../lib/node-couchdb/couchdb');
-//const DB_PORT = 5984;
-const DB_PORT = 80;
-//const DB_HOST = "localhost";
-const DB_HOST = "http://scenejs.couchone.com";
+const DB_PORT = 5984;
+const DB_HOST = "localhost";
+
+//const DB_HOST = "http://scenejs.couchone.com";
 var client;
 var db;
 log("Asset Server connecting to CouchDB at " + DB_HOST + ":" + DB_PORT);
@@ -24,11 +25,6 @@ try {
 } catch (e) {
     throw "Failed to connect to CouchDB at " + DB_HOST + ":" + DB_PORT;
 }
-
-var http = require("http");
-var url = require("url");
-var Buffer = require("buffer").Buffer;
-var uuid = require('../../lib/uuid');
 
 /** Creates asset, asset body and asset assembly
  */
@@ -45,6 +41,10 @@ exports.createAsset = function(params, cb) {
         cb({ error: 501, body: "createAsset.assembly expected" });
     } else if (!params.assembly.type) {
         cb({ error: 501, body: "createAsset.assembly.type expected" });
+    } else if (!params.assembly.source) {
+        cb({ error: 501, body: "createAsset.assembly.source expected" });
+    } else if (!params.assembly.source.url) {
+        cb({ error: 501, body: "createAsset.assembly.source.url expected" });
     } else {
         log("createAsset");
 
@@ -68,7 +68,7 @@ exports.createAsset = function(params, cb) {
     }
 };
 
-/* Creates asset body, then asset assembly info, then asset proper, in that order.
+/* Creates asset body, then asset assembly info, then asset metadata, in that order.
  * We start by creating the body because it's the part that is most likely to fail
  * because it involves fetching and parsing the target file.
  */
@@ -126,13 +126,13 @@ function createAssetAssembly(params, product, assetBody, cb) {
 function createAssetMeta(params, product, assetBody, assembly, cb) {
     var id = "asset-meta-" + uuid.uuidFast();
     log("creating asset meta: " + id);
+    var asset = product.asset || {}; // Optional asset metadata found by parser
     db.saveDoc(id, {
         type : "asset-meta",
         title : params.meta.title || product.asset.title,
-        description : params.meta.description || product.asset.title,
-        contributor : params.meta.contributor || product.asset.contributor,
-        
-        tags : mergeMaps(params.meta.tags || [], product.asset.tags || []),
+        description : params.meta.description || asset.title || "n/a",
+        contributor : params.meta.contributor || asset.contributor || "n/a",
+        tags : mergeMaps(params.meta.tags || [], asset.tags || []),
         manifest : product.manifest || {},
         assetBodyId : assetBody.id,
         assetAssemblyId : assembly.id
@@ -156,7 +156,7 @@ function mergeMaps(map1, map2) {
     return map1;
 }
 
-exports.getAssetMetaTags = function(params, cb) {
+exports.getAssetMetaTags = function(params, cb) { // TODO:
     cb({ format: "json", body: JSON.stringify(["cats", "dogs", "collada", "tests", "obj", "mtl", "architecture"]) });
 };
 
@@ -218,4 +218,3 @@ exports.removeAsset = function(params, product, cb) {
                 });
     }
 };
-

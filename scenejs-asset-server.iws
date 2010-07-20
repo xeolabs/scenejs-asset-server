@@ -2,28 +2,25 @@
 <project relativePaths="false" version="4">
   <component name="ChangeListManager">
     <list default="true" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/assets/builders/dae/collada-builder.js" afterPath="$PROJECT_DIR$/src/assets/builders/dae/collada-builder.js" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/preMadeSaxEventHandler.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/jsdom.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/level2/html.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/level3/core.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/bvh/bvh-parser.js" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/loader.js" afterPath="$PROJECT_DIR$/lib/loader.js" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/assets/assetStore.js" afterPath="$PROJECT_DIR$/src/assets/assetStore.js" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/assets/builders/collada-builder.js" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/src/assetServer.js" afterPath="$PROJECT_DIR$/src/runServer.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scenejs-asset-server.iws" afterPath="$PROJECT_DIR$/scenejs-asset-server.iws" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/utils/domParser.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/node-xml.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/level2/events.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/level3/events.js" afterPath="" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/assets/utils/glge_xmlparser.js" afterPath="$PROJECT_DIR$/lib/glge_xmlparser.js" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/browser/browser.js" afterPath="" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/assets/utils/loader.js" afterPath="$PROJECT_DIR$/lib/loader.js" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/xmlsax.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/browser/index.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/xmlw3cdom.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/level1/core.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/xmldom.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/level2/core.js" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/assetService.js" afterPath="$PROJECT_DIR$/src/assetService.js" />
+      <change type="MOVED" beforePath="$PROJECT_DIR$/lib/glge_xmlparser.js" afterPath="$PROJECT_DIR$/lib/scenejs-utils/dep/glge_xmlparser.js" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/bvh/bvh-builder.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/anim1/anim-builder-1.js" afterPath="" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/html/test.html" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/utils.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/src/tools.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/mtl/mtl-builder.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/mtl/mtl-parser.js" afterPath="" />
+      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/README.md" />
     </list>
-    <ignored path=".idea/workspace.xml" />
     <ignored path="scenejs-asset-server.iws" />
+    <ignored path=".idea/workspace.xml" />
   </component>
   <component name="ChangesViewManager" flattened_view="true" show_ignored="false" />
   <component name="Commander">
@@ -79,19 +76,82 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="loader.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/loader.js">
+      <file leaf-file-name="collada-builder.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/assets/builders/collada-builder.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="23" column="0" selection-start="642" selection-end="642" vertical-scroll-proportion="0.0">
+            <state line="71" column="57" selection-start="2596" selection-end="2605" vertical-scroll-proportion="-48.28">
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="uuid.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/uuid.js">
+      <file leaf-file-name="assetStore.js" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/assets/assetStore.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="30" column="0" selection-start="938" selection-end="938" vertical-scroll-proportion="0.0">
+            <state line="41" column="31" selection-start="1441" selection-end="1441" vertical-scroll-proportion="0.11111111">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="test.html" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/html/test.html">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="32" column="32" selection-start="1030" selection-end="1030" vertical-scroll-proportion="-21.083334">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="assetService.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/src/assetService.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="116" column="31" selection-start="3792" selection-end="3792" vertical-scroll-proportion="-13.28">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="loader.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/lib/loader.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="23" column="0" selection-start="631" selection-end="631" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="scenejs-json-builder.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-json-builder.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="72" column="43" selection-start="2588" selection-end="2588" vertical-scroll-proportion="-25.84">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="couchdb.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/lib/node-couchdb/couchdb.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="27" column="95" selection-start="760" selection-end="760" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="scenejs-collada-parser.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-collada-parser.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="535" column="72" selection-start="21751" selection-end="21751" vertical-scroll-proportion="-11.2">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="glge_xmlparser.js" pinned="false" current="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/dep/glge_xmlparser.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -101,69 +161,6 @@
         <entry file="file://$PROJECT_DIR$/lib/websocket.js">
           <provider selected="true" editor-type-id="text-editor">
             <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="ws.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/ws.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="utils.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/utils.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="collada-builder.js" pinned="false" current="true" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/src/assets/builders/dae/collada-builder.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="70" column="25" selection-start="2623" selection-end="2623" vertical-scroll-proportion="1.4082841">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="scenejsBuilder.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/assets/utils/scenejsBuilder.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="get.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/npm/get.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="set.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/npm/set.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="glge_xmlparser.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/lib/glge_xmlparser.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="9" column="82" selection-start="434" selection-end="434" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -281,63 +278,7 @@
           <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
         </PATH_ELEMENT>
         <PATH_ELEMENT>
-          <option name="myItemId" value="utils" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-      </PATH>
-      <PATH>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="scenejs-asset-server" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="Scenejs-asset-server" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="scenejs-asset-server" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="src" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="assets" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
           <option name="myItemId" value="builders" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-      </PATH>
-      <PATH>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="scenejs-asset-server" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="Scenejs-asset-server" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="scenejs-asset-server" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="src" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="assets" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="builders" />
-          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
-        </PATH_ELEMENT>
-        <PATH_ELEMENT>
-          <option name="myItemId" value="dae" />
           <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
         </PATH_ELEMENT>
       </PATH>
@@ -359,6 +300,68 @@
           <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
         </PATH_ELEMENT>
       </PATH>
+      <PATH>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="Scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="lib" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="scenejs-utils" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+      </PATH>
+      <PATH>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="Scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="lib" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="request" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+      </PATH>
+      <PATH>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="Scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewModuleNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="scenejs-asset-server" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+        <PATH_ELEMENT>
+          <option name="myItemId" value="html" />
+          <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+        </PATH_ELEMENT>
+      </PATH>
     </subPane>
   </component>
   <component name="ProjectReloadState">
@@ -366,11 +369,11 @@
   </component>
   <component name="ProjectView">
     <navigator currentView="ProjectPane" proportions="0.5" version="1" splitterProportion="0.5">
-      <flattenPackages />
+      <flattenPackages ProjectPane="false" />
       <showMembers />
       <showModules />
       <showLibraryContents />
-      <hideEmptyPackages />
+      <hideEmptyPackages ProjectPane="false" />
       <abbreviatePackageNames />
       <showStructure ProjectPane="false" />
       <autoscrollToSource ProjectPane="true" />
@@ -382,13 +385,13 @@
     <property name="GoToFile.includeJavaFiles" value="false" />
     <property name="GoToClass.toSaveIncludeLibraries" value="false" />
     <property name="options.splitter.main.proportions" value="0.3" />
-    <property name="MemberChooser.sorted" value="false" />
     <property name="options.lastSelected" value="reference.settings.ide.settings.web.browsers" />
+    <property name="MemberChooser.sorted" value="false" />
     <property name="MemberChooser.showClasses" value="true" />
     <property name="GoToClass.includeLibraries" value="false" />
-    <property name="MemberChooser.copyJavadoc" value="false" />
-    <property name="options.splitter.details.proportions" value="0.2" />
     <property name="options.searchVisible" value="true" />
+    <property name="options.splitter.details.proportions" value="0.2" />
+    <property name="MemberChooser.copyJavadoc" value="false" />
   </component>
   <component name="RunManager">
     <configuration default="true" type="Remote" factoryName="Remote">
@@ -397,6 +400,32 @@
       <option name="SHMEM_ADDRESS" value="javadebug" />
       <option name="HOST" value="localhost" />
       <option name="PORT" value="5005" />
+    </configuration>
+    <configuration default="true" type="TestNG" factoryName="TestNG" enabled="false" merge="false">
+      <module name="" />
+      <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
+      <option name="ALTERNATIVE_JRE_PATH" />
+      <option name="SUITE_NAME" />
+      <option name="PACKAGE_NAME" />
+      <option name="MAIN_CLASS_NAME" />
+      <option name="METHOD_NAME" />
+      <option name="GROUP_NAME" />
+      <option name="TEST_OBJECT" value="CLASS" />
+      <option name="VM_PARAMETERS" />
+      <option name="PARAMETERS" />
+      <option name="WORKING_DIRECTORY" />
+      <option name="OUTPUT_DIRECTORY" />
+      <option name="ANNOTATION_TYPE" />
+      <option name="ENV_VARIABLES" />
+      <option name="PASS_PARENT_ENVS" value="true" />
+      <option name="ADDITIONAL_CLASS_PATH" />
+      <option name="TEST_SEARCH_SCOPE">
+        <value defaultName="moduleWithDependencies" />
+      </option>
+      <option name="PROPERTIES_FILE" />
+      <envs />
+      <properties />
+      <listeners />
     </configuration>
     <configuration default="true" type="Applet" factoryName="Applet">
       <module name="" />
@@ -476,14 +505,14 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1920" y="26" width="1919" height="1013" extended-state="1" />
+    <frame x="1920" y="27" width="1919" height="1107" extended-state="1" />
     <editor active="true" />
     <layout>
       <window_info id="Data Sources" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="1" side_tool="false" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.17305699" sideWeight="0.5" order="1" side_tool="false" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="3" side_tool="false" />
       <window_info id="Dataflow to this" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
@@ -492,7 +521,7 @@
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24986623" sideWeight="0.5" order="0" side_tool="false" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24986623" sideWeight="0.8196891" order="0" side_tool="false" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" />
@@ -526,21 +555,28 @@
     <breakpoint-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/README">
+    <entry file="file://$PROJECT_DIR$/src/runServer.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="8" column="56" selection-start="526" selection-end="526" vertical-scroll-proportion="0.0">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/assets/assetStore.js">
+    <entry file="file://$PROJECT_DIR$/src/assets/builders/builder-registry.js">
       <provider selected="true" editor-type-id="text-editor">
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/assets/utils/scenejsBuilder.js">
+    <entry file="file://$PROJECT_DIR$/lib/uuid.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/request/request.js">
       <provider selected="true" editor-type-id="text-editor">
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
           <folding />
@@ -561,30 +597,16 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/lib/utils.js">
+    <entry file="file://$PROJECT_DIR$/lib/node-couchdb/couchdb.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="27" column="95" selection-start="760" selection-end="760" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/dep/glge_xmlparser.js">
       <provider selected="true" editor-type-id="text-editor">
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/glge_xmlparser.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="9" column="82" selection-start="434" selection-end="434" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/loader.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="23" column="0" selection-start="642" selection-end="642" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/uuid.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="30" column="0" selection-start="938" selection-end="938" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
@@ -596,16 +618,51 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/lib/ws.js">
+    <entry file="file://$PROJECT_DIR$/lib/loader.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
+        <state line="23" column="0" selection-start="631" selection-end="631" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/assets/builders/dae/collada-builder.js">
+    <entry file="file://$PROJECT_DIR$/html/test.html">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="70" column="25" selection-start="2623" selection-end="2623" vertical-scroll-proportion="1.4082841">
+        <state line="32" column="32" selection-start="1030" selection-end="1030" vertical-scroll-proportion="-21.083334">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-collada-parser.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="535" column="72" selection-start="21751" selection-end="21751" vertical-scroll-proportion="-11.2">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-json-builder.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="72" column="43" selection-start="2588" selection-end="2588" vertical-scroll-proportion="-25.84">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/assets/builders/collada-builder.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="71" column="57" selection-start="2596" selection-end="2605" vertical-scroll-proportion="-48.28">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/assetService.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="116" column="31" selection-start="3792" selection-end="3792" vertical-scroll-proportion="-13.28">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/src/assets/assetStore.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="41" column="31" selection-start="1441" selection-end="1441" vertical-scroll-proportion="0.11111111">
           <folding />
         </state>
       </provider>

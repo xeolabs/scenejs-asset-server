@@ -4,7 +4,6 @@ var log = require('../lib/log').log;
 
 /**
  *   Services request to create/query/remove assets on the asset store
- *
  */
 exports.service = function(params, callback) {
     if (!params.cmd) {
@@ -14,7 +13,6 @@ exports.service = function(params, callback) {
         });
         return;
     }
-
 
     switch (params.cmd) {
 
@@ -107,7 +105,7 @@ exports.service = function(params, callback) {
 //    sys.puts("getAssetBody: result = " + result.error + ", " + result.body);
 //});
 
-//
+
 for (var i = 0; i < 10; i++) {
     assetStore.createAsset({
         meta : {
@@ -117,9 +115,9 @@ for (var i = 0; i < 10; i++) {
         },
         assembly : {
             type : "dae",
-            sourceURL: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae",
-            visualScene : "VisualSceneNode",
-            camera : null  // Could use the COLLADA file's camera if we wanted
+            source: {
+                url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
+            }
         }},
             function(result) {
                 if (result.error) {
@@ -135,41 +133,3 @@ for (var i = 0; i < 10; i++) {
                 }
             });
 }
-
-
-//
-///** Returns snippet of SceneJS JavaScript that will fetch the existing asset of the given ID
-// */
-//function getAssetSocketPastie(params, callback) {
-//    if (!params.assetId) {
-//        callback({
-//            error: 501,
-//            body: "parameter expected: assetId"
-//        });
-//        return;
-//    }
-//    assets.getAssetInfo(
-//            function(result) {
-//                if (result.error) {
-//                    callback(result);
-//                } else {
-//                    var assetInfo = result.body;
-//                    callback({
-//                        body: ["SceneJS.socket({",
-//                            "        uri: \"ws://xeolabs.org/modelbank/\",",
-//                            "        messages: [{",
-//                            "            cmd: \"getAssetBody\",",
-//                            "            id : \"" + assetInfo.assetId + "\",",
-//                            "            attachToNode: \"#687678687687687678678678687687\"," +
-//                            "        }" +
-//                            "    }," +
-//                            "    SceneJS.node({ sid: \"687678687687687678678678687687\"}));"].join("")
-//                    });
-//                }
-//            });
-//}
-//;
-//
-//
-//
-//
