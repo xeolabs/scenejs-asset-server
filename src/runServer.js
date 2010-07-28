@@ -10,7 +10,7 @@ function USAGE(message) {
     sys.puts("\n  USAGE: node runServer.js HOST PORT\n\n" +
              "  Run the SceneJS Asset Server.\n" +
              "\b\n" +
-             "  Example:\n\t\tnode runServer.js http://localhost 8888\n\n");
+             "  Example:\n\t\tnode runServer.js localhost 8888\n\n");
 
     if (message !== undefined) {
         sys.puts(message);
@@ -76,27 +76,52 @@ server.addListener("close", function(conn) {
 });
 
 // Handle HTTP Requests:
-server.addListener("request", function(req, res) {
-    res.writeHead(200, {'Content-Type': "text/plain"});
-    var params = qs.parse(url.parse(req.url).query);
-    log("http request " + JSON.stringify(params));
-    assetService.service(
-            params,
-            function (result) {
-                if (result.error) {
-                    log("error handling HTTP request: " + result.error + " : " + result.body);
-                    res.end(JSON.stringify(result));
-                } else {
-                    var jsonStr = JSON.stringify(result);
-                    log("responding with " + jsonStr.length + " chars");
-                    res.end(jsonStr);
-                }
-            });
-    log("DONE http request");
-});
+server.addListener("request",
+        function(req, res) {
+            res.writeHead(200, {'Content-Type': "text/plain"});
+            var params = qs.parse(url.parse(req.url).query);
+
+
+            log("http request " + JSON.stringify(params));
+
+            assetService.service(
+                    params,
+                    function (result) {
+                        if (result.error) {
+                            log("error handling HTTP request: " + result.error + " : " + result.body);
+                            res.end(JSON.stringify(result));
+                        } else {
+                            var jsonStr = JSON.stringify(result);
+                            log("responding with " + jsonStr.length + " chars");
+                            res.end(jsonStr);
+                        }
+                    });
+            log("DONE http request");
+        });
 
 server.addListener("shutdown", function(conn) {
     log("Server shutdown"); // never actually happens, because I never tell the server to shutdown.
 });
 
 server.listen(PORT, HOST);
+
+
+var sys = require('sys'),
+fs = require('fs'),
+        http = require('http');
+var twimg = http.createClient(80, 'a1.twimg.com');
+var request = twimg.request('GET', '/profile_images/815822634/mg_normal.jpg',
+{'host': "a1.twimg.com"});
+var writeStream = fs.createWriteStream("./815822634_mg_normal.jpg",
+{ 'flags': 'w', 'encoding': 'binary','mode': 0666})
+request.addListener('response', function (response) {
+    response.setEncoding,('binary');
+    response.addListener('data', function (chunk) {
+        writeStream.write(chunk, "binary");
+    });
+    response.addListener('end', function () {
+        writeStream.end();
+    });
+});
+
+request.end();

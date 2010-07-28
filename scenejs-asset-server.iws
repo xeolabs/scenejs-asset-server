@@ -2,22 +2,13 @@
 <project relativePaths="false" version="4">
   <component name="ChangeListManager">
     <list default="true" name="Default" comment="">
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/bvh/bvh-parser.js" afterPath="" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/lib/loader.js" afterPath="$PROJECT_DIR$/lib/loader.js" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/scenejs/dep/glge_xmlparser.js" afterPath="" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/assets/assetStore.js" afterPath="$PROJECT_DIR$/src/assets/assetStore.js" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/src/assets/builders/collada-builder.js" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/src/assetServer.js" afterPath="$PROJECT_DIR$/src/runServer.js" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/scenejs-asset-server.iws" afterPath="$PROJECT_DIR$/scenejs-asset-server.iws" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/assetService.js" afterPath="$PROJECT_DIR$/src/assetService.js" />
-      <change type="MOVED" beforePath="$PROJECT_DIR$/lib/glge_xmlparser.js" afterPath="$PROJECT_DIR$/lib/scenejs-utils/dep/glge_xmlparser.js" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/bvh/bvh-builder.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/anim1/anim-builder-1.js" afterPath="" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/html/test.html" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/utils.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/tools.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/mtl/mtl-builder.js" afterPath="" />
-      <change type="DELETED" beforePath="$PROJECT_DIR$/src/assets/builders/mtl/mtl-parser.js" afterPath="" />
-      <change type="NEW" beforePath="" afterPath="$PROJECT_DIR$/README.md" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/scenejs/scenejs-json-builder.js" afterPath="" />
+      <change type="DELETED" beforePath="$PROJECT_DIR$/lib/scenejs/scenejs-collada-parser.js" afterPath="" />
+      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/src/runServer.js" afterPath="$PROJECT_DIR$/src/runServer.js" />
     </list>
     <ignored path="scenejs-asset-server.iws" />
     <ignored path=".idea/workspace.xml" />
@@ -76,19 +67,10 @@
   </component>
   <component name="FileEditorManager">
     <leaf>
-      <file leaf-file-name="collada-builder.js" pinned="false" current="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/src/assets/builders/collada-builder.js">
-          <provider selected="true" editor-type-id="text-editor">
-            <state line="71" column="57" selection-start="2596" selection-end="2605" vertical-scroll-proportion="-48.28">
-              <folding />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file leaf-file-name="assetStore.js" pinned="false" current="true" current-in-tab="true">
+      <file leaf-file-name="assetStore.js" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/assets/assetStore.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="41" column="31" selection-start="1441" selection-end="1441" vertical-scroll-proportion="0.11111111">
+            <state line="28" column="29" selection-start="811" selection-end="812" vertical-scroll-proportion="-0.0">
               <folding />
             </state>
           </provider>
@@ -97,7 +79,7 @@
       <file leaf-file-name="test.html" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/html/test.html">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="32" column="32" selection-start="1030" selection-end="1030" vertical-scroll-proportion="-21.083334">
+            <state line="32" column="32" selection-start="1030" selection-end="1030" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -106,7 +88,16 @@
       <file leaf-file-name="assetService.js" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/src/assetService.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="116" column="31" selection-start="3792" selection-end="3792" vertical-scroll-proportion="-13.28">
+            <state line="38" column="73" selection-start="1050" selection-end="1050" vertical-scroll-proportion="0.0">
+              <folding />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file leaf-file-name="runServer.js" pinned="false" current="true" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/src/runServer.js">
+          <provider selected="true" editor-type-id="text-editor">
+            <state line="109" column="16" selection-start="3725" selection-end="3725" vertical-scroll-proportion="0.66283923">
               <folding />
             </state>
           </provider>
@@ -124,7 +115,7 @@
       <file leaf-file-name="scenejs-json-builder.js" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-json-builder.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="72" column="43" selection-start="2588" selection-end="2588" vertical-scroll-proportion="-25.84">
+            <state line="72" column="43" selection-start="2588" selection-end="2588" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -142,7 +133,7 @@
       <file leaf-file-name="scenejs-collada-parser.js" pinned="false" current="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-collada-parser.js">
           <provider selected="true" editor-type-id="text-editor">
-            <state line="535" column="72" selection-start="21751" selection-end="21751" vertical-scroll-proportion="-11.2">
+            <state line="535" column="72" selection-start="21751" selection-end="21751" vertical-scroll-proportion="0.0">
               <folding />
             </state>
           </provider>
@@ -385,13 +376,13 @@
     <property name="GoToFile.includeJavaFiles" value="false" />
     <property name="GoToClass.toSaveIncludeLibraries" value="false" />
     <property name="options.splitter.main.proportions" value="0.3" />
-    <property name="options.lastSelected" value="reference.settings.ide.settings.web.browsers" />
     <property name="MemberChooser.sorted" value="false" />
+    <property name="options.lastSelected" value="reference.settings.ide.settings.web.browsers" />
     <property name="MemberChooser.showClasses" value="true" />
     <property name="GoToClass.includeLibraries" value="false" />
-    <property name="options.searchVisible" value="true" />
-    <property name="options.splitter.details.proportions" value="0.2" />
     <property name="MemberChooser.copyJavadoc" value="false" />
+    <property name="options.splitter.details.proportions" value="0.2" />
+    <property name="options.searchVisible" value="true" />
   </component>
   <component name="RunManager">
     <configuration default="true" type="Remote" factoryName="Remote">
@@ -401,7 +392,7 @@
       <option name="HOST" value="localhost" />
       <option name="PORT" value="5005" />
     </configuration>
-    <configuration default="true" type="TestNG" factoryName="TestNG" enabled="false" merge="false">
+    <configuration default="true" type="TestNG" factoryName="TestNG" enabled="false" merge="false" runner="emma">
       <module name="" />
       <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="false" />
       <option name="ALTERNATIVE_JRE_PATH" />
@@ -505,14 +496,14 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="1920" y="27" width="1919" height="1107" extended-state="1" />
+    <frame x="1920" y="27" width="1919" height="1126" extended-state="1" />
     <editor active="true" />
     <layout>
       <window_info id="Data Sources" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" />
       <window_info id="Changes" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
       <window_info id="Palette" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.17305699" sideWeight="0.5" order="1" side_tool="false" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.17296223" sideWeight="0.5" order="1" side_tool="false" />
       <window_info id="Debug" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="3" side_tool="false" />
       <window_info id="Dataflow to this" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
@@ -521,7 +512,7 @@
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.25" sideWeight="0.5" order="1" side_tool="false" />
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="0" side_tool="false" />
       <window_info id="Maven Projects" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="3" side_tool="false" />
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.24986623" sideWeight="0.8196891" order="0" side_tool="false" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" weight="0.16318887" sideWeight="0.8196891" order="0" side_tool="false" />
       <window_info id="Dependency Viewer" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="7" side_tool="false" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.4" sideWeight="0.5" order="5" side_tool="false" />
       <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" weight="0.33" sideWeight="0.5" order="2" side_tool="false" />
@@ -555,13 +546,6 @@
     <breakpoint-manager />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/src/runServer.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="-0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/src/assets/builders/builder-registry.js">
       <provider selected="true" editor-type-id="text-editor">
         <state line="0" column="0" selection-start="0" selection-end="0" vertical-scroll-proportion="0.0">
@@ -597,9 +581,44 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/src/assets/builders/collada-builder.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="71" column="57" selection-start="2596" selection-end="2605" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/html/test.html">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="32" column="32" selection-start="1030" selection-end="1030" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/loader.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="23" column="0" selection-start="631" selection-end="631" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-json-builder.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="72" column="43" selection-start="2588" selection-end="2588" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/lib/node-couchdb/couchdb.js">
       <provider selected="true" editor-type-id="text-editor">
         <state line="27" column="95" selection-start="760" selection-end="760" vertical-scroll-proportion="0.0">
+          <folding />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-collada-parser.js">
+      <provider selected="true" editor-type-id="text-editor">
+        <state line="535" column="72" selection-start="21751" selection-end="21751" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
@@ -618,51 +637,23 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/lib/loader.js">
+    <entry file="file://$PROJECT_DIR$/src/assets/assetStore.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="23" column="0" selection-start="631" selection-end="631" vertical-scroll-proportion="0.0">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/html/test.html">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="32" column="32" selection-start="1030" selection-end="1030" vertical-scroll-proportion="-21.083334">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-collada-parser.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="535" column="72" selection-start="21751" selection-end="21751" vertical-scroll-proportion="-11.2">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/lib/scenejs-utils/scenejs-json-builder.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="72" column="43" selection-start="2588" selection-end="2588" vertical-scroll-proportion="-25.84">
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/src/assets/builders/collada-builder.js">
-      <provider selected="true" editor-type-id="text-editor">
-        <state line="71" column="57" selection-start="2596" selection-end="2605" vertical-scroll-proportion="-48.28">
+        <state line="28" column="29" selection-start="811" selection-end="812" vertical-scroll-proportion="-0.0">
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/src/assetService.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="116" column="31" selection-start="3792" selection-end="3792" vertical-scroll-proportion="-13.28">
+        <state line="38" column="73" selection-start="1050" selection-end="1050" vertical-scroll-proportion="0.0">
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/src/assets/assetStore.js">
+    <entry file="file://$PROJECT_DIR$/src/runServer.js">
       <provider selected="true" editor-type-id="text-editor">
-        <state line="41" column="31" selection-start="1441" selection-end="1441" vertical-scroll-proportion="0.11111111">
+        <state line="109" column="16" selection-start="3725" selection-end="3725" vertical-scroll-proportion="0.66283923">
           <folding />
         </state>
       </provider>

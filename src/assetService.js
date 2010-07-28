@@ -34,6 +34,21 @@ exports.service = function(params, callback) {
 
         case "getAssetBody" :
 
+
+            /* Get asset body through a SceneJS.Socket to attach to subgraph or straight-out child of Socket.
+             * getting through HTTP gives option of either module or raw subgraph.
+             */
+            var symbolNode = params.symbolNode ? params.symbolNode.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : null;
+            if (symbolNode) {
+                if (symbolNode.length == 0) {
+                    callback({
+                        error: 501,
+                        body: "symbolNode is empty string"
+                    });
+                }
+                symbolNode = symbolNode.charAt(0) == "#" ? symbolNode : "#" + symbolNode;
+            }
+
             /* Get attachToNode - if given, prepend with hash required by
              * the SceneJS configs map that SceneJS.Socket will push onto its subgraph
              */
@@ -46,17 +61,6 @@ exports.service = function(params, callback) {
                     });
                 }
                 attachToNode = attachToNode.charAt(0) == "#" ? attachToNode : "#" + attachToNode;
-            }
-
-            var symbolNode = params.symbolNode ? params.symbolNode.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : null;
-            if (symbolNode) {
-                if (symbolNode.length == 0) {
-                    callback({
-                        error: 501,
-                        body: "attachToNode is empty string"
-                    });
-                }
-                symbolNode = symbolNode.charAt(0) == "#" ? symbolNode : "#" + symbolNode;
             }
 
             assetStore.getAssetBody(
@@ -77,10 +81,6 @@ exports.service = function(params, callback) {
                             }
                         }
                     });
-            break;
-
-        case "removeAsset" :
-            assetStore.removeAsset(params, callback);
             break;
 
         default:
