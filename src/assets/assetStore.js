@@ -1,67 +1,113 @@
+/*
+ Copyright (c) 2010 Lindsay Kay <lindsay.kay@xeolabs.com>
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in all
+ copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ */
 var builders = require('./builders/builder-registry');
 
 require('./builders/collada-builder').init();
 
 var sys = require("sys");
-var log = require('../../lib/log').log;
+
+var fs = require('fs');
+var path = require("path");
 var http = require("http");
 var url = require("url");
-var Buffer = require("buffer").Buffer;
+var log = require('../../lib/log').log;
 var uuid = require('../../lib/uuid');
+var jsonUtils = require('../../lib/scenejs-utils/scenejs-json-utils');
+var couchdb = require('../../lib/node-couchdb/couchdb'); // Node-CouchDB: http://github.com/felixge/node-couchdb
+var mkdirp = require('../../lib/npm/mkdir-p');
 
-
-// Node-CouchDB: http://github.com/felixge/node-couchdb
-var couchdb = require('../../lib/node-couchdb/couchdb');
-const DB_PORT = 5984;
-const DB_HOST = "localhost";
-
-//const DB_HOST = "184.106.205.99";
+var settings;
 var client;
 var db;
-log("Asset Server connecting to CouchDB at " + DB_HOST + ":" + DB_PORT);
-try {
-    client = couchdb.createClient(DB_PORT, DB_HOST);
-    db = client.db('scenejs-assets');
-} catch (e) {
-    throw "Failed to connect to CouchDB at " + DB_HOST + ":" + DB_PORT;
+
+exports.start = function(_settings) {
+    settings = _settings;
+
+    /* Ensure attachments dir exists
+     */
+    if (settings.attachmentsDir.charAt(settings.attachmentsDir.length - 1) != "/") {
+        settings.attachmentsDir += "/";
+    }
+    ensureDirExists(settings.attachmentsDir);
+
+    /* Fire up the asset service    
+     */
+    log("Asset Server connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
+    try {
+        client = couchdb.createClient(settings.db.port, settings.db.host);
+        db = client.db('scenejs-assets');
+    } catch (e) {
+        throw "Failed to connect to CouchDB at " + settings.db.host + ":" + settings.db.port;
+    }
+};
+
+function ensureDirExists(dir) {
+    path.exists(dir, function(exists) {
+        if (!exists) {
+            mkdirp.mkdir(dir, 0755, function(error) {
+                if (error) {
+                    throw "Unable to create attachmentsDir '" + dir + "': " + error;
+                }
+            });
+        }
+    });
 }
 
 /** Creates four records for a new asset: body, assembly, metadata and handle.
  */
-exports.createAsset = function(reqParams, cb) {
-    if (!reqParams.meta) {
+exports.createAsset = function(params, cb) {
+    if (!params.meta) {
         cb({ error: 501, body: "createAsset.meta expected" });
-    } else if (!reqParams.meta.tags) {
+    } else if (!params.meta.tags) {
         cb({ error: 501, body: "createAsset.meta.tags expected" });
-    } else if (!reqParams.meta.title) {
-        cb({ error: 501, body: "createAsset.meta.title expected" });
-    } else if (!reqParams.meta.description) {
+    } else if (!params.meta.name) {
+        cb({ error: 501, body: "createAsset.meta.name expected" });
+    } else if (!params.meta.description) {
         cb({ error: 501, body: "createAsset.meta.description expected" });
-    } else if (!reqParams.assembly) {
+    } else if (!params.assembly) {
         cb({ error: 501, body: "createAsset.assembly expected" });
-    } else if (!reqParams.assembly.type) {
+    } else if (!params.assembly.type) {
         cb({ error: 501, body: "createAsset.assembly.type expected" });
-    } else if (!reqParams.assembly.source) {
+    } else if (!params.assembly.source) {
         cb({ error: 501, body: "createAsset.assembly.source expected" });
-    } else if (!reqParams.assembly.source.url) {
+    } else if (!params.assembly.source.url) {
         cb({ error: 501, body: "createAsset.assembly.source.url expected" });
     } else {
         log("createAsset");
 
-        var builder = builders.getBuilder(reqParams.assembly.type);
+        var builder = builders.getBuilder(params.assembly.type);
         if (!builder) {
             cb({
                 error: 404, // ie. can't find any assets of this type
-                body: "asset type not supported: assembly.type '" + reqParams.assembly.type + "'"
+                body: "asset type not supported: assembly.type '" + params.assembly.type + "'"
             });
         } else {
             builder.build(
-                    reqParams.assembly,
+                    params.assembly,
                     function(builderProduct) {
                         if (builderProduct.error) {
                             cb(builderProduct);
                         } else {
-                            createAssetBody(reqParams, builderProduct, cb);
+                            createAssetBody(params, builderProduct, cb);
                         }
                     });
         }
@@ -72,13 +118,12 @@ exports.createAsset = function(reqParams, cb) {
  * We start by creating the body because it's the part that is most likely to fail
  * because it involves fetching and parsing the target file.
  */
-function createAssetBody(reqParams, builtProduct, cb) {
+function createAssetBody(params, builtProduct, cb) {
     var id = "asset-body-" + uuid.uuidFast();
     log("creating asset body: " + id);
     db.saveDoc(id, {
         type : "asset-content",
         rootNode: builtProduct.body.rootNode
-        //body: builtProduct.body.replace("ATTACHMENT_DIR", "http://foo.com/")
     },
             function(error, assetBody) {
                 if (error) {
@@ -88,11 +133,11 @@ function createAssetBody(reqParams, builtProduct, cb) {
 
                     /* Create asset assembly record
                      */
-                    createAssetAssembly(reqParams, builtProduct, assetBody,
+                    createAssetAssembly(params, builtProduct, assetBody,
                             function(result) {
                                 if (result.error) {
 
-                                    /* Failed to create assembly - uncreate body                                    
+                                    /* Failed to create assembly - uncreate body
                                      */
                                     db.removeDoc(assetBody.id, assetBody.rev,
                                             function(error, result) {
@@ -106,12 +151,12 @@ function createAssetBody(reqParams, builtProduct, cb) {
 
 /** Creates the asset assembly record, then the metadata and handle records
  *
- * @param reqParams
+ * @param params
  * @param builtProduct
  * @param assetBody
  * @param cb
  */
-function createAssetAssembly(reqParams, builtProduct, assetBody, cb) {
+function createAssetAssembly(params, builtProduct, assetBody, cb) {
     var id = "asset-assembly-" + uuid.uuidFast();
     log("creating asset assembly: " + id);
     db.saveDoc(id, {
@@ -121,7 +166,7 @@ function createAssetAssembly(reqParams, builtProduct, assetBody, cb) {
          * all sorts of properties for strange assemblies, and so we don't want to clash
          * with the names of any other properties, such as 'type'
          */
-        assembly : reqParams.assembly
+        assembly : params.assembly
     },
             function(error, assembly) {
                 if (error) {
@@ -129,9 +174,9 @@ function createAssetAssembly(reqParams, builtProduct, assetBody, cb) {
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
-                    /* Create metadata record
+                    /* Create asset images and metadata record
                      */
-                    createAssetMeta(reqParams, builtProduct, assetBody, assembly,
+                    saveAssetImages(params, builtProduct, assetBody, assembly,
                             function(result) {
                                 if (result.error) {
 
@@ -147,25 +192,138 @@ function createAssetAssembly(reqParams, builtProduct, assetBody, cb) {
             });
 }
 
-/** Creates the asset metadata record
+/** Saves asset images then creates metadata
  *
- * @param reqParams
+ * @param params
  * @param builtProduct
  * @param assetBody
  * @param assetAssembly
  * @param cb
  */
-function createAssetMeta(reqParams, builtProduct, assetBody, assetAssembly, cb) {
+function saveAssetImages(params, builtProduct, assetBody, assetAssembly, cb) {
+    log("saving asset images..");
+
+    saveImages(params, builtProduct,
+
+            function(error, savedImages) {
+
+                if (error) {
+                    cb({ error: 500, body: JSON.stringify(error) });
+
+                } else {
+
+                    sys.puts(JSON.stringify(savedImages));
+
+                    /* Create metadata record
+                     */
+                    createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedImages,
+                            function(result) {
+                                if (result.error) {
+
+                                    /* Failed to create metadata - remove images dir
+                                     */
+                                    fs.rmdir(savedImages.imagesDir, function(error) {
+                                        // noop
+                                    });
+                                }
+                                cb(result);
+                            });
+                }
+            });
+}
+
+function saveImages(params, builtProduct, cb) {
+    var imagesDir = settings.attachmentsDir + "/" + uuid.uuidFast() + "/";
+    fs.mkdir(imagesDir, 0755, function(error) {
+        if (error) {
+            cb({ error: error });
+        } else {
+            var savedImages = [];
+            if (builtProduct.body.attachments) {
+                var attachments = builtProduct.body.attachments;
+                try {
+                    fetchAttachments(imagesDir, attachments, 0, savedImages);
+                } catch (e) {
+                    fs.rmdir(imagesDir, function(error) {
+
+                        // noop
+                    });
+                    cb({ error: e });
+                    return;
+                }
+            }
+            cb(null, { imagesDir: imagesDir, savedImages: savedImages });
+        }
+    });
+}
+
+/**
+ * Recursively loop through attachments, loading each one while blocking.
+ * Not majorly efficient, but ensures that we don't have too many concurrent
+ * connections and file handles open. Since asset creation is likely done as
+ * a batch process I can live with this.
+ *
+ * @param imagesDir
+ * @param attachments
+ * @param i
+ * @param savedImages
+ */
+function fetchAttachments(imagesDir, attachments, i, savedImages) {
+    if (i < attachments.length) {
+        fetchAttachment(imagesDir, attachments[i],
+                function(error) {
+                    if (error) {
+                        throw error;
+                    }
+                    fetchAttachments(imagesDir, attachments, i + 1, savedImages);
+                });
+    }
+}
+
+function fetchAttachment(imagesDir, attachment, cb) {
+    var parts = url.parse(attachment.absPath);
+    var twimg = http.createClient(80, parts.host);
+    var request = twimg.request('GET', parts.pathname, { 'host': parts.host });
+    var writeStream = fs.createWriteStream(imagesDir + attachment.name, {
+        'flags': 'w', 'encoding': 'binary','mode': 0666});
+
+    request.addListener('response',
+            function (response) {
+                response.setEncoding('binary');
+                response.addListener('data', function (chunk) {
+                    writeStream.write(chunk, "binary");
+                });
+                response.addListener('end', function () {
+                    writeStream.end();
+                    cb(null);
+                });
+            });
+
+    request.end();
+}
+
+/** Creates the asset metadata record
+ *
+ * @param params
+ * @param builtProduct
+ * @param assetBody
+ * @param assetAssembly
+ * @param cb
+ */
+function createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedImages, cb) {
     var id = "asset-meta-" + uuid.uuidFast();
     log("creating asset meta: " + id);
     var asset = builtProduct.asset || {}; // Optional asset metadata found by parser
     db.saveDoc(id, {
         type : "asset-meta",
-        title : reqParams.meta.title || builtProduct.asset.title,
-        description : reqParams.meta.description || asset.title || "n/a",
-        contributor : reqParams.meta.contributor || asset.contributor || "n/a",
-        tags : mergeMaps(reqParams.meta.tags || [], asset.tags || []),
-        manifest : builtProduct.body.manifest || {}
+        name : params.meta.name || builtProduct.asset.name,
+        description : params.meta.description || asset.name || "n/a",
+        contributor : params.meta.contributor || asset.contributor || "n/a",
+        tags : mergeMaps(params.meta.tags || [], asset.tags || []),
+        manifest : builtProduct.body.manifest || {},
+        spatial : builtProduct.body.spatial || {},
+        stats : builtProduct.body.stats || {},
+        images : savedImages
     },
             function(error, assetMeta) {
                 if (error) {
@@ -175,7 +333,7 @@ function createAssetMeta(reqParams, builtProduct, assetBody, assetAssembly, cb) 
 
                     /* Create asset handle record
                      */
-                    createAssetHandle(reqParams, builtProduct, assetBody, assetAssembly, assetMeta,
+                    createAssetHandle(params, builtProduct, assetBody, assetAssembly, assetMeta,
                             function(result) {
                                 if (result.error) {
 
@@ -202,15 +360,15 @@ function mergeMaps(map1, map2) {
 
 /** Creates asset handle record, which references the asset body, assembly and metadata documents
  *
- * @param reqParams
+ * @param params
  * @param builtProduct
  * @param assetBody
  * @param assetAssembly
  * @param assetMeta
  * @param cb
  */
-function createAssetHandle(reqParams, builtProduct, assetBody, assetAssembly, assetMeta, cb) {
-    var id = "asset-handle-" + uuid.uuidFast();
+function createAssetHandle(params, builtProduct, assetBody, assetAssembly, assetMeta, cb) {
+    var id = "asset-" + uuid.uuidFast();
     log("creating asset handle: " + id);
     db.saveDoc(id, {
         type : "asset-handle",
@@ -218,36 +376,37 @@ function createAssetHandle(reqParams, builtProduct, assetBody, assetAssembly, as
         assetAssemblyId : assetAssembly.id,
         assetMetaId : assetMeta.id
     },
-            function(error, result) {
+            function(error, assetHandle) {
                 if (error) {
                     sys.puts("FAILED to create " + id);
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
-                    cb({ body: result });
+                    cb({ body: { id: assetHandle._id } });
                 }
             });
 }
 
+
 /** Gets all available asset category tags
  *
- * @param reqParams
+ * @param params
  * @param cb
  */
-exports.getAssetMetaTags = function(reqParams, cb) { // TODO:
+exports.getAssetMetaTags = function(params, cb) { // TODO:
     cb({ format: "json", body: JSON.stringify(["cats", "dogs", "collada", "tests", "obj", "mtl", "architecture"]) });
 };
 
 /** Gets metadata on an asset
  *
- * @param reqParams
+ * @param params
  * @param cb
  */
-exports.getAssetMeta = function(reqParams, cb) {
-    if (!reqParams.id) {
-        cb({ error: 501, body: "getAssetMata.id expected" });
+exports.getAssetMeta = function(params, cb) {
+    if (!params.id) {
+        cb({ error: 501, body: "getAssetMeta.id expected" });
     } else {
-        log("getAssetMeta: " + reqParams.id);
-        db.getDoc(reqParams.id,
+        log("getAssetMeta id:" + params.id);
+        db.getDoc(params.id,
                 function(error, assetHandle) {
                     if (error) {
                         cb({ error: 500, body: JSON.stringify(error) });
@@ -259,12 +418,13 @@ exports.getAssetMeta = function(reqParams, cb) {
                                     } else {
                                         cb({ format: "json",
                                             body: JSON.stringify({    // Filter out couchdb id and rev
-                                                type : "asset-meta",
-                                                title : assetMeta.title,
+                                                name : assetMeta.name,
                                                 description : assetMeta.description,
                                                 contributor : assetMeta.contributor,
                                                 tags : assetMeta.tags,
-                                                manifest : assetMeta.manifest
+                                                manifest : assetMeta.manifest,
+                                                spatial : assetMeta.spatial,
+                                                stats : assetMeta.stats
                                             })
                                         });
                                     }
@@ -276,15 +436,15 @@ exports.getAssetMeta = function(reqParams, cb) {
 
 /** Gets assembly information on an asset
  *
- * @param reqParams
+ * @param params
  * @param cb
  */
-exports.getAssetAssembly = function(reqParams, cb) {
-    if (!reqParams.id) {
+exports.getAssetAssembly = function(params, cb) {
+    if (!params.id) {
         cb({ error: 501, body: "getAssetAssembly.id expected" });
     } else {
-        log("getAssetAssembly: " + reqParams.id);
-        db.getDoc(reqParams.id,
+        log("getAssetAssembly: " + params.id);
+        db.getDoc(params.id,
                 function(error, assetHandle) {
                     if (error) {
                         cb({ error: 500, body: JSON.stringify(error) });
@@ -296,8 +456,7 @@ exports.getAssetAssembly = function(reqParams, cb) {
                                     } else {
                                         cb({ format: "json",
                                             body: JSON.stringify({          // Filter out couchdb id and rev
-                                                type : "asset-assembly",
-                                                assembly : assetAssembly
+                                                assembly : assetAssembly.assembly
                                             })
                                         });
                                     }
@@ -307,41 +466,127 @@ exports.getAssetAssembly = function(reqParams, cb) {
     }
 };
 
-/** Gets contents of an asset
- *
- * @param reqParams
- * @param cb
- */
-exports.getAssetBody = function(reqParams, cb) {
-    if (!reqParams.id) {
-        cb({ error: 501, body: "getAssetBody.id expected" });
-    } else {
-        log("getAssetBody: " + reqParams.id);
-        db.getDoc(reqParams.id,
-                function(error, assetHandle) {
-                    if (error) {
-                        cb({ error: 500, body: JSON.stringify(error) });
-                    } else {
-
-                        db.getDoc(assetHandle.assetBodyId.id,
-                                function(error, assetBody) {
-                                    if (error) {
-                                        cb({ error: 500, body: JSON.stringify(error) });
-                                    } else {
-                                        cb({ format: "json", body: assetBody.body });   // Body is a big string of SceneJS scene definition
-                                    }
-                                });
-                    }
-                });
+exports.getAsset = function(params, cb) {
+    if (!params.id) {
+        cb({ error: 501, body: "getAssetNode.id expected" });
+        return;
     }
+
+    if (!params.pkg) {
+        cb({ error: 501, body: "getAssetNode.pkg expected" });
+        return;
+    }
+
+    log("getAsset id: " + params.id + ", pkg: " + params.pkg);
+
+    /* Get asset handle first
+     */
+    db.getDoc(params.id,
+            function(error, assetHandle) {
+                if (error) {
+                    cb({ error: 500, body: JSON.stringify(error) });
+
+                } else {
+
+                    /* Then get asset metadata
+                     */
+                    db.getDoc(assetHandle.assetMetaId,
+                            function(error, assetMeta) {
+                                if (error) {
+                                    cb({ error: 500, body: JSON.stringify(error) });
+
+                                } else {
+
+                                    /* Then get asset body
+                                     */
+                                    db.getDoc(assetHandle.assetBodyId,
+                                            function(error, assetBody) {
+                                                if (error) {
+                                                    cb({ error: 500, body: JSON.stringify(error) });
+
+                                                } else {
+
+                                                    /* Package the asset body
+                                                     */
+                                                    switch (params.pkg) {
+                                                        case "socket" :
+                                                            assetPkgForSocket(params, assetMeta, assetBody, cb);
+                                                            break;
+
+                                                        case "module":
+                                                            assetPkgForModule(params, assetMeta, assetBody, cb);
+                                                            break;
+
+                                                        default:
+                                                            cb({
+                                                                error: 501,
+                                                                body: "I don't know that pkg: '" + params.pkg + "'"
+                                                            });
+                                                    }
+                                                }
+                                            });
+                                }
+                            });
+                }
+            });
 };
 
-exports.removeAsset = function(reqParams, builderProduct, cb) {
-    if (!reqParams.assetMetaId) {
+
+/** Packages asset node for use by client SceneJS.Socket
+ */
+function assetPkgForSocket(params, assetMeta, assetBody, cb) {
+
+    /* Madatory attachToNode param - prepend with hash required
+     * in the SceneJS.Socket configs map
+     */
+    var attachToNode = params.attachToNode ? params.attachToNode.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : null;
+    if (!attachToNode) {
+        cb({ error: 501, body: "getAsset.attachToNode expected" });
+        return;
+    }
+    attachToNode = attachToNode.charAt(0) == "#" ? attachToNode : "#" + attachToNode;
+
+    /* Optional symbolURI
+     */
+    var symbolURI = params.symbolURI ? params.symbolURI.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : null;
+    if (symbolURI) {
+        if (symbolURI.length == 0) {
+            cb({
+                error: 501,
+                body: "getAsset.symbolURI is empty string"
+            });
+            return;
+        }
+        symbolURI = symbolURI.charAt(0) == "#" ? symbolURI : "#" + symbolURI;
+    }
+    cb({
+        format : "json",
+        body: "{ \"" + attachToNode + "\": { \"+node\": " +
+              jsonUtils.packageAsFactoryFunc(assetBody.rootNode, {
+                  baseURL: assetMeta.images.imagesDir,
+                  symbolURI:params.symbolURI
+              }) +
+              " } }"
+    });
+}
+
+function assetPkgForModule(params, assetMeta, assetBody, cb) {
+    cb({
+        format : "script",
+        body: jsonUtils.packageAsModule(
+                assetMeta.name,
+                assetBody.rootNode,
+                null,
+                assetMeta.images.imagesDir)  // TODO: comments option
+    });
+}
+
+exports.removeAsset = function(params, builderProduct, cb) {
+    if (!params.assetMetaId) {
         cb({ error: 501, body: "removeAsset.id expected" });
     } else {
         this.getAsset({
-            id: reqParams.assetMetaId
+            id: params.assetMetaId
         },
                 function(result) {
                     if (result.error) {
@@ -352,3 +597,4 @@ exports.removeAsset = function(reqParams, builderProduct, cb) {
                 });
     }
 };
+

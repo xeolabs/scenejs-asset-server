@@ -1,0 +1,10 @@
+{
+    host : "localhost",
+    port : 8080,
+    attachmentsDir : "./.assetserver/attachments",
+    db : {
+        host: "localhost",
+        port: 5984,
+        dbname: "scenejs-assets"
+    }
+}

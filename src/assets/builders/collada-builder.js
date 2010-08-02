@@ -8,7 +8,7 @@ var colladaLib = require('../../../lib/scenejs-utils/scenejs-collada-parser');
 exports.init = function() {
 
     registry.registerBuilder({
-        
+
         info : {
             id: "dae"
         },
@@ -86,10 +86,16 @@ exports.init = function() {
 
                                                             /* All done!
                                                              */
+
                                                             cb({
                                                                 body: {
                                                                     rootNode: result.body.rootNode,
-                                                                    manifest : result.body.manifest
+                                                                    manifest : result.body.manifest,
+                                                                    spatial : result.body.spatial,
+                                                                    stats: result.body.stats,
+                                                                    attachments : getAttachmentURLs(
+                                                                            assetParams.source.url,
+                                                                            result.body.manifest.attachments)
                                                                 }
                                                             });
                                                         }
@@ -101,3 +107,16 @@ exports.init = function() {
         }
     });
 };
+
+function getAttachmentURLs(sourceURL, attachments) {
+    var baseURL = sourceURL.substring(0, sourceURL.lastIndexOf("/") + 1);
+    var urls = [];
+    for (var i = 0; i < attachments.length; i++) {
+        urls.push({
+            absPath : baseURL + attachments[i].relPath,
+            relPath : attachments[i].relPath,
+            name : attachments[i].name
+        });
+    }
+    return urls;
+}
