@@ -121,29 +121,37 @@ exports.createAsset = function(params, cb) {
 function createAssetBody(params, builtProduct, cb) {
     var id = "asset-body-" + uuid.uuidFast();
     log("creating asset body: " + id);
+
+    /* Create body
+     */
     db.saveDoc(id, {
-        type : "asset-content",
+        type : "asset-body",
         rootNode: builtProduct.body.rootNode
     },
             function(error, assetBody) {
+
+                /* Failed
+                 */
                 if (error) {
                     log("FAILED to create asset-body " + id);
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
-                    /* Create asset assembly record
+                    /* Create assembly
                      */
                     createAssetAssembly(params, builtProduct, assetBody,
                             function(result) {
                                 if (result.error) {
 
-                                    /* Failed to create assembly - uncreate body
+                                    /* Failed - remove body
                                      */
                                     db.removeDoc(assetBody.id, assetBody.rev,
                                             function(error, result) {
                                             });
                                 }
-                                cb(result);
+                                if (cb) {
+                                    cb(result);
+                                }
                             });
                 }
             });
@@ -159,6 +167,9 @@ function createAssetBody(params, builtProduct, cb) {
 function createAssetAssembly(params, builtProduct, assetBody, cb) {
     var id = "asset-assembly-" + uuid.uuidFast();
     log("creating asset assembly: " + id);
+
+    /* Create assembly
+     */
     db.saveDoc(id, {
         type : "asset-assembly",
 
@@ -170,17 +181,20 @@ function createAssetAssembly(params, builtProduct, assetBody, cb) {
     },
             function(error, assembly) {
                 if (error) {
+
+                    /* Failed
+                     */
                     sys.puts("FAILED to create " + id);
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
-                    /* Create asset images and metadata record
+                    /* Create images and metadata
                      */
                     saveAssetImages(params, builtProduct, assetBody, assembly,
                             function(result) {
                                 if (result.error) {
 
-                                    /* Failed to create metadata - uncreate assembly record
+                                    /* Failed - uncreate assembly
                                      */
                                     db.removeDoc(assembly.id, assembly.rev,
                                             function(error, result) {
@@ -316,10 +330,8 @@ function createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedIm
     var asset = builtProduct.asset || {}; // Optional asset metadata found by parser
     db.saveDoc(id, {
         type : "asset-meta",
-        name : params.meta.name || builtProduct.asset.name,
         description : params.meta.description || asset.name || "n/a",
         contributor : params.meta.contributor || asset.contributor || "n/a",
-        tags : mergeMaps(params.meta.tags || [], asset.tags || []),
         manifest : builtProduct.body.manifest || {},
         spatial : builtProduct.body.spatial || {},
         stats : builtProduct.body.stats || {},
@@ -372,6 +384,8 @@ function createAssetHandle(params, builtProduct, assetBody, assetAssembly, asset
     log("creating asset handle: " + id);
     db.saveDoc(id, {
         type : "asset-handle",
+        name : params.meta.name || builtProduct.asset.name,
+        tags : mergeMaps(params.meta.tags || [], (builtProduct.asset ? builtProduct.asset.tags : [])),
         assetBodyId : assetBody.id,
         assetAssemblyId : assetAssembly.id,
         assetMetaId : assetMeta.id
@@ -386,15 +400,74 @@ function createAssetHandle(params, builtProduct, assetBody, assetAssembly, asset
             });
 }
 
-
-/** Gets all available asset category tags
- *
- * @param params
- * @param cb
- */
-exports.getAssetMetaTags = function(params, cb) { // TODO:
-    cb({ format: "json", body: JSON.stringify(["cats", "dogs", "collada", "tests", "obj", "mtl", "architecture"]) });
+exports.getAssetTags = function(params, cb) {
+    log("getAssetTags");
+    db.view("asset-meta", "all_tags", {},
+            function(error, tags) {
+                if (error) {
+                    cb({ error: 500, body: JSON.stringify(error) });
+                } else {
+                    cb({
+                        format: "json",
+                        body:  JSON.stringify(tags)
+                    });
+                }
+            });
 };
+
+exports.getAssets = function(params, cb) {
+    log("getAssets");
+    db.view("asset-meta", "all-assets", {},
+            function(error, tags) {
+                if (error) {
+                    cb({ error: 500, body: JSON.stringify(error) });
+                } else {
+                    cb({
+                        format: "json",
+                        body:  JSON.stringify(tags)
+                    });
+                }
+            });
+};
+
+//
+//exports.getAssetTags = function(params, cb) { // TODO:
+//    cb({ format: "json", body: JSON.stringify(["cats", "dogs", "collada", "tests", "obj", "mtl", "architecture"]) });
+//};
+
+
+exports.getAssetsForTags = function(params, cb) {
+    if (!params.tags) {
+        cb({ error: 501, body: "getAssetsForTags.tags expected" });
+    } else {
+        log("getAssetMeta tags:" + JSON.stringify(params.tags));
+        db.getDoc(params.id,
+                function(error, assetHandle) {
+                    if (error) {
+                        cb({ error: 500, body: JSON.stringify(error) });
+                    } else {
+                        db.getDoc(assetHandle.assetMetaId,
+                                function(error, assetMeta) {
+                                    if (error) {
+                                        cb({ error: 500, body: JSON.stringify(error) });
+                                    } else {
+                                        cb({ format: "json",
+                                            body:  JSON.stringify({    // Filter out couchdb id and rev
+                                                name : assetMeta.name,
+                                                description : assetMeta.description,
+                                                contributor : assetMeta.contributor,
+                                                manifest : assetMeta.manifest,
+                                                spatial : assetMeta.spatial,
+                                                stats : assetMeta.stats
+                                            })
+                                        });
+                                    }
+                                });
+                    }
+                });
+    }
+};
+
 
 /** Gets metadata on an asset
  *
@@ -417,7 +490,7 @@ exports.getAssetMeta = function(params, cb) {
                                         cb({ error: 500, body: JSON.stringify(error) });
                                     } else {
                                         cb({ format: "json",
-                                            body: JSON.stringify({    // Filter out couchdb id and rev
+                                            body:  JSON.stringify({    // Filter out couchdb id and rev
                                                 name : assetMeta.name,
                                                 description : assetMeta.description,
                                                 contributor : assetMeta.contributor,
@@ -468,12 +541,12 @@ exports.getAssetAssembly = function(params, cb) {
 
 exports.getAsset = function(params, cb) {
     if (!params.id) {
-        cb({ error: 501, body: "getAssetNode.id expected" });
+        cb({ error: 501, body: "getAsset.id expected" });
         return;
     }
 
     if (!params.pkg) {
-        cb({ error: 501, body: "getAssetNode.pkg expected" });
+        cb({ error: 501, body: "getAsset.pkg expected" });
         return;
     }
 
@@ -561,12 +634,27 @@ function assetPkgForSocket(params, assetMeta, assetBody, cb) {
     }
     cb({
         format : "json",
-        body: "{ \"" + attachToNode + "\": { \"+node\": " +
+        //        body:  '   { ' +
+        //                       '        configs: {' +
+        //                       '            "#attachHere": {' +
+        //                       '                "+node" : SceneJS.node({ sid: "teapot" },' +
+        //                       '                        SceneJS.translate(' +
+        //                       '                            SceneJS.rotate({' +
+        //                       '                                   sid: "rotate",' +
+        //                       '                                    angle: 0,' +
+        //                       '                                    y : 1.0' +
+        //                       '                                },' +
+        //                       '                                SceneJS.objects.teapot())))' +
+        //                       '            }' +
+        //                       '       }' +
+        //                       '   }'
+        body: "{ configs: { " +
+              "\"" + attachToNode + "\": { \"+node\": " +
               jsonUtils.packageAsFactoryFunc(assetBody.rootNode, {
                   baseURL: assetMeta.images.imagesDir,
                   symbolURI:params.symbolURI
               }) +
-              " } }"
+              " } } }"
     });
 }
 

@@ -42,6 +42,14 @@ exports.defaultSettings = {
     }
 };
 
+function createMessage(msg) {
+    return "{ body: " + msg + "}";
+}
+
+function createErrorMessage(code, msg) {
+    return "{ error: " + code + ", body: '" + msg + "'}";
+}
+
 exports.start = function(customSettings, cb) {
     settings = customSettings || {};
     settings.__proto__ = exports.defaultSettings;
@@ -80,10 +88,10 @@ exports.start = function(customSettings, cb) {
                                                 params,
                                                 function (result) {
                                                     if (result.error) {
-                                                        server.send(conn._id, JSON.stringify(result));
+                                                        server.send(conn._id, createErrorMessage(501, result.error));
                                                     } else {
-                                                        var jsonStr = JSON.stringify(result);
-                                                        server.send(conn._id, jsonStr);
+                                                        server.send(conn._id, createMessage(result.body));
+                                                     //   log(createMessage(result.body))
                                                     }
                                                 });
                                     },
@@ -105,20 +113,20 @@ exports.start = function(customSettings, cb) {
 
     server.addListener("request",
             function(req, res) {
-                res.writeHead(200, {'Content-Type': "text/plain"});
+                res.writeHead(200, {'Content-Type': "application/json"});
                 var params = qs.parse(url.parse(req.url).query);
                 log("http request " + JSON.stringify(params));
 
                 service(
                         params,
                         function (result) {
+                            var resultStr;
+
                             if (result.error) {
                                 log("error handling HTTP request: " + result.error + " : " + result.body);
-                                res.end(JSON.stringify(result));
+                                resultStr = JSON.stringify(result);
 
                             } else {
-
-                                var resultStr;
                                 switch (result.format) {
 
                                     /* Naked unbodied response from asset store,
@@ -135,11 +143,18 @@ exports.start = function(customSettings, cb) {
                                         resultStr = JSON.stringify(result);
                                 }
 
-                                log("responding with " + resultStr.length + " chars");
-                                res.end(resultStr);
-
+                                //  log("responding with " + resultStr);
                             }
+
+                            if (params.callback) {
+                                res.end(wrapInCallback(params.callback, resultStr));
+                            } else {
+                                // log("XXXXXXXXXXXXXXX  " + resultStr);
+                                res.end(resultStr);
+                            }
+
                         });
+
                 log("DONE http request");
             });
 
@@ -169,7 +184,7 @@ function service(params, callback) {
         if (!fn) {
             callback({
                 error: 501,
-                body: "I don't know that cmd: '" + params.cmd + "'"
+                body: "I dont know that cmd: '" + params.cmd + "'"
             });
         } else {
             fn(params, callback);
@@ -177,34 +192,37 @@ function service(params, callback) {
     }
 }
 
+function wrapInCallback(callback, str) {
+    return [callback, "(", str, ")"].join("");
+}
+
 
 function createDummyContent() {
-    for (var i = 0; i < 10; i++) {
-        assetStore.createAsset({
-            meta : {
-                name :"plane",
-                description: "This is my elephant!",
-                tags : ["rabbits"]
-            },
-            assembly : {
-                type : "dae",
-                source: {
-                    url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
-                    //    url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
-                }
-            }},
-                function(result) {
-                    if (result.error) {
-                        sys.puts("" + result.error + ": " + result.body);
-                    } else {
-                        sys.puts("CREATED OK");
-                        //                    assetStore.getAsset({ cmd: "getAsset",
-                        //                        assetId : "org.scenejs.examples.v0_7_6.seymour_plane_A"+i
-                        //                    },
-                        //                            function(result) {
-                        //                                sys.puts("" + result.error + ": " + result.body);
-                        //                            });
-                    }
-                });
-    }
+
+
+    assetStore.createAsset({
+        meta : {
+            name :"org.scenejs.examples.collada.seymourplane",
+            description: "The Seymour Plane test model",
+            tags : ["collada", "example", "zoofers"]
+        },
+        assembly : {
+            type : "dae",
+            source: {
+                url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
+            }
+        }});
+
+    assetStore.createAsset({
+        meta : {
+            name :"org.scenejs.examples.collada.house",
+            description: "House model from VAST Architecture",
+            tags : ["collada", "example", "gizangos"]
+        },
+        assembly : {
+            type : "dae",
+            source: {
+                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
+            }
+        }});
 }
