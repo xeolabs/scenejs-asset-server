@@ -19,6 +19,22 @@
  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  SOFTWARE.
  */
+
+/*----------------------------------------------------------------------------------------------------------------------
+ * Asset server core
+ *
+ * Provides a single #start function to kick it off, then listens for commands on WS and HTTP.
+ *
+ * This is just a thin wrapper around the Asset Store. It maps the value of the request "cmd" parameter to a function
+ * on the Asset Store module, leaving that to validate the remaining parameters in context of the request.
+ *
+ * For a WS, the response from the Asset Store module is just serialised straight back as JSON.
+ *
+ * For HTTP the Store's response will have a "format" field specifying whether the response needs JSONification or
+ * is already serielised. For HTTP, it also takes an optional "callback" parameter which causes it to wrap the
+ * response for JSONP.
+ *--------------------------------------------------------------------------------------------------------------------*/
+
 var sys = require("sys");
 var log = require('../lib/log').log;
 var ws = require('../lib/ws');
@@ -50,6 +66,11 @@ function createErrorMessage(code, msg) {
     return "{ error: " + code + ", body: '" + msg + "'}";
 }
 
+/** Starts the asset server
+ *
+ * @param customSettings Optional settings to override internal defaults
+ * @param cb Success callback
+ */
 exports.start = function(customSettings, cb) {
     settings = customSettings || {};
     settings.__proto__ = exports.defaultSettings;
@@ -76,11 +97,11 @@ exports.start = function(customSettings, cb) {
     server.addListener("connection",
             function(conn) {
 
-
                 log("opened connection: " + conn._id);
 
                 conn.addListener("message",
                         function(message) {
+
                             parseMessage(message,
                                     function(params) {
 
@@ -91,12 +112,10 @@ exports.start = function(customSettings, cb) {
                                                         server.send(conn._id, createErrorMessage(501, result.error));
                                                     } else {
                                                         server.send(conn._id, createMessage(result.body));
-                                                     //   log(createMessage(result.body))
                                                     }
                                                 });
                                     },
                                     function(error) {
-                                        // log("<" + conn._id + "> ERROR handling request: " + error.error + " : " + error.message);
                                         server.send(JSON.stringify(error));
                                     });
                         });
@@ -130,7 +149,7 @@ exports.start = function(customSettings, cb) {
                                 switch (result.format) {
 
                                     /* Naked unbodied response from asset store,
-                                     * eh. script for <script> tag or SceneJS.requireModule
+                                     * eg. script for <script> tag or SceneJS.requireModule
                                      */
                                     case "script" :
                                         resultStr = result.body;
@@ -149,7 +168,6 @@ exports.start = function(customSettings, cb) {
                             if (params.callback) {
                                 res.end(wrapInCallback(params.callback, resultStr));
                             } else {
-                                // log("XXXXXXXXXXXXXXX  " + resultStr);
                                 res.end(resultStr);
                             }
 
@@ -199,30 +217,61 @@ function wrapInCallback(callback, str) {
 
 function createDummyContent() {
 
+    //    assetStore.deleteAsset({
+    //        id :"org.scenejs.examples.collada.seymourplane"
+    //    },
+    //            function(result) {
+    //                if (result.error) {
+    //                    log(JSON.stringify(result.error));
+    //                }
+    //            });
+    //
+    //    assetStore.deleteAsset({
+    //        id :"org.scenejs.examples.collada.house"
+    //    },
+    //            function(result) {
+    //                if (result.error) {
+    //                    log(JSON.stringify(result.error));
+    //                }
+    //            });
 
-    assetStore.createAsset({
-        meta : {
-            name :"org.scenejs.examples.collada.seymourplane",
-            description: "The Seymour Plane test model",
-            tags : ["collada", "example", "zoofers"]
-        },
-        assembly : {
-            type : "dae",
-            source: {
-                url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
-            }
-        }});
-
-    assetStore.createAsset({
-        meta : {
-            name :"org.scenejs.examples.collada.house",
-            description: "House model from VAST Architecture",
-            tags : ["collada", "example", "gizangos"]
-        },
-        assembly : {
-            type : "dae",
-            source: {
-                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
-            }
-        }});
+//    assetStore.createAsset({
+//        meta : {
+//            name :"org.scenejs.examples.collada.seymourplane",
+//            description: "The Seymour Plane test model",
+//            tags : ["collada", "example", "zoofers", "zafus"]
+//        },
+//        assembly : {
+//            type : "dae",
+//            source: {
+//                url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
+//            }
+//        }});
+//
+//    assetStore.createAsset({
+//        meta : {
+//            name :"org.scenejs.examples.collada.house",
+//            description: "House model from VAST Architecture",
+//            tags : ["collada", "example", "gizangos"]
+//        },
+//        assembly : {
+//            type : "dae",
+//            source: {
+//                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
+//            }
+//        }});
+//
+//    assetStore.createAsset({
+//        meta : {
+//            name :"org.scenejs.examples.scenejs.spiralstairs",
+//            description: "Procedurally-generated spiral staircase",
+//            tags : ["collada", "example", "gizangos"]
+//        },
+//        assembly : {
+//            type : "scenejs",
+//            source: {
+//                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
+//            },
+//            images: []
+//        }});
 }

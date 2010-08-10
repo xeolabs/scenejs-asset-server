@@ -22,6 +22,13 @@
  SOFTWARE.
  */
 
+/*----------------------------------------------------------------------------------------------------------------------
+ * Bootstraps the asset server, feeding it the settings file
+ * specified on the command line, falling back on defaults when not specified
+ *
+ *--------------------------------------------------------------------------------------------------------------------*/
+
+
 var fs = require('fs');
 var assetService = require('./src/assetService');
 var sys = require('sys');

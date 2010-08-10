@@ -34,10 +34,18 @@ var uuid = require('../../lib/uuid');
 var jsonUtils = require('../../lib/scenejs-utils/scenejs-json-utils');
 var couchdb = require('../../lib/node-couchdb/couchdb'); // Node-CouchDB: http://github.com/felixge/node-couchdb
 var mkdirp = require('../../lib/npm/mkdir-p');
+var rmdirrf = require('../../lib/npm/rm-rf');
 
 var settings;
 var client;
 var db;
+
+/*----------------------------------------------------------------------------------------------------------------------
+ * Asset Store
+ *
+ * After starting it up with #start, the store
+ *--------------------------------------------------------------------------------------------------------------------*/
+
 
 exports.start = function(_settings) {
     settings = _settings;
@@ -72,8 +80,13 @@ function ensureDirExists(dir) {
     });
 }
 
-/** Creates four records for a new asset: body, assembly, metadata and handle.
- */
+/*---------------------------------------------------------------------------------------------------------------------
+ * Creates new asset. This creates four records for the new asset: body, assembly, metadata and handle. These
+ * creations are done in a chain, in that order. Also creates an attachments directory (path specified in settings)
+ * and downloads all images referenced in the asset source file(s) into that.
+ *
+ * Cleans up on error by unmaking all documents/directories/files that were successfully made.
+ *--------------------------------------------------------------------------------------------------------------------*/
 exports.createAsset = function(params, cb) {
     if (!params.meta) {
         cb({ error: 501, body: "createAsset.meta expected" });
@@ -133,7 +146,7 @@ function createAssetBody(params, builtProduct, cb) {
                 /* Failed
                  */
                 if (error) {
-                    log("FAILED to create asset-body " + id);
+                    log("FAILED to create asset-body " + id + ": " + JSON.stringify(error));
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
@@ -143,10 +156,14 @@ function createAssetBody(params, builtProduct, cb) {
                             function(result) {
                                 if (result.error) {
 
-                                    /* Failed - remove body
+                                    /* Failed - remove asset body
                                      */
+                                    log("Deleting asset-body " + assetBody.id);
                                     db.removeDoc(assetBody.id, assetBody.rev,
                                             function(error, result) {
+                                                if (error) {
+                                                    log("FAILED to delete asset-body " + assetBody.id + ": " + JSON.stringify(error));
+                                                }
                                             });
                                 }
                                 if (cb) {
@@ -184,7 +201,7 @@ function createAssetAssembly(params, builtProduct, assetBody, cb) {
 
                     /* Failed
                      */
-                    sys.puts("FAILED to create " + id);
+                    log("FAILED to create asset-assembly " + id + ": " + error);
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
@@ -196,8 +213,12 @@ function createAssetAssembly(params, builtProduct, assetBody, cb) {
 
                                     /* Failed - uncreate assembly
                                      */
+                                    log("Deleting asset-assembly " + assembly.id);
                                     db.removeDoc(assembly.id, assembly.rev,
                                             function(error, result) {
+                                                if (error) {
+                                                    log("FAILED to delete asset-assembly " + assembly.id + ": " + error);
+                                                }
                                             });
                                 }
                                 cb(result);
@@ -226,8 +247,6 @@ function saveAssetImages(params, builtProduct, assetBody, assetAssembly, cb) {
 
                 } else {
 
-                    sys.puts(JSON.stringify(savedImages));
-
                     /* Create metadata record
                      */
                     createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedImages,
@@ -236,8 +255,11 @@ function saveAssetImages(params, builtProduct, assetBody, assetAssembly, cb) {
 
                                     /* Failed to create metadata - remove images dir
                                      */
-                                    fs.rmdir(savedImages.imagesDir, function(error) {
-                                        // noop
+                                    log("Removing images dir " + savedImages.imagesDir);
+                                    rmdirrf.rm(savedImages.imagesDir, function(error) {
+                                        if (error) {
+                                            log("FAILED to remove images dir " + savedImages.imagesDir + ": " + error);
+                                        }
                                     });
                                 }
                                 cb(result);
@@ -248,27 +270,35 @@ function saveAssetImages(params, builtProduct, assetBody, assetAssembly, cb) {
 
 function saveImages(params, builtProduct, cb) {
     var imagesDir = settings.attachmentsDir + "/" + uuid.uuidFast() + "/";
-    fs.mkdir(imagesDir, 0755, function(error) {
-        if (error) {
-            cb({ error: error });
-        } else {
-            var savedImages = [];
-            if (builtProduct.body.attachments) {
-                var attachments = builtProduct.body.attachments;
-                try {
-                    fetchAttachments(imagesDir, attachments, 0, savedImages);
-                } catch (e) {
-                    fs.rmdir(imagesDir, function(error) {
-
-                        // noop
-                    });
-                    cb({ error: e });
-                    return;
+    fs.mkdir(imagesDir, 0755,
+            function(error) {
+                if (error) {
+                    log("FAILED to create images dir " + imagesDir + ": " + error);
+                    cb({ error: error });
+                } else {
+                    var savedImages = {
+                        imageList : []
+                    };
+                    if (builtProduct.body.attachments) {
+                        var attachments = builtProduct.body.attachments;
+                        try {
+                            fetchAttachments(imagesDir, attachments, 0, savedImages,
+                                    function() {
+                                        cb(null, { imagesDir: imagesDir, savedImages: savedImages.imageList });
+                                    });
+                        } catch (e) {
+                            rmdirrf.rm(imagesDir,
+                                    function(error) {
+                                        if (error) {
+                                            log("FAILED to remove images dir " + imagesDir + ": " + error);
+                                        }
+                                    });
+                            cb({ error: e });
+                            return;
+                        }
+                    }
                 }
-            }
-            cb(null, { imagesDir: imagesDir, savedImages: savedImages });
-        }
-    });
+            });
 }
 
 /**
@@ -276,21 +306,20 @@ function saveImages(params, builtProduct, cb) {
  * Not majorly efficient, but ensures that we don't have too many concurrent
  * connections and file handles open. Since asset creation is likely done as
  * a batch process I can live with this.
- *
- * @param imagesDir
- * @param attachments
- * @param i
- * @param savedImages
  */
-function fetchAttachments(imagesDir, attachments, i, savedImages) {
+function fetchAttachments(imagesDir, attachments, i, savedImages, cb) {
     if (i < attachments.length) {
         fetchAttachment(imagesDir, attachments[i],
                 function(error) {
                     if (error) {
+                        log("FAILED to fetch attachment " + attachments[i].name + ": " + error);
                         throw error;
                     }
-                    fetchAttachments(imagesDir, attachments, i + 1, savedImages);
+                    savedImages.imageList.push(attachments[i].name);
+                    fetchAttachments(imagesDir, attachments, i + 1, savedImages, cb);
                 });
+    } else {
+        cb();
     }
 }
 
@@ -339,7 +368,7 @@ function createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedIm
     },
             function(error, assetMeta) {
                 if (error) {
-                    sys.puts("FAILED to create " + id);
+                    log("FAILED to create asset-meta " + id + ": " + error);
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
@@ -351,8 +380,12 @@ function createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedIm
 
                                     /* Failed to create handle - uncreate metadata
                                      */
+                                    log("Deleting asset-meta " + assetMeta.id);
                                     db.removeDoc(assetMeta.id, assetMeta.rev,
                                             function(error, result) {
+                                                if (error) {
+                                                    log("FAILED to delete asset-meta " + assetMeta.id + ": " + JSON.stringify(error));
+                                                }
                                             });
                                 }
                                 cb(result);
@@ -380,7 +413,8 @@ function mergeMaps(map1, map2) {
  * @param cb
  */
 function createAssetHandle(params, builtProduct, assetBody, assetAssembly, assetMeta, cb) {
-    var id = "asset-" + uuid.uuidFast();
+    var id = params.meta.name.replace(/ /g, ".");
+    //var id = "asset-" + uuid.uuidFast();
     log("creating asset handle: " + id);
     db.saveDoc(id, {
         type : "asset-handle",
@@ -392,14 +426,138 @@ function createAssetHandle(params, builtProduct, assetBody, assetAssembly, asset
     },
             function(error, assetHandle) {
                 if (error) {
-                    sys.puts("FAILED to create " + id);
+                    log("FAILED to create asset " + id + ": " + JSON.stringify(error));
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
-                    cb({ body: { id: assetHandle._id } });
+                    cb({ body: { id: assetHandle.id } });
                 }
             });
 }
 
+
+/*---------------------------------------------------------------------------------------------------------------------
+ * Deletes an asset. This deletes four components: body, assembly, metadata and handle, along with the attachments
+ * directory.
+ *--------------------------------------------------------------------------------------------------------------------*/
+exports.deleteAsset = function(params, cb) {
+    if (!params.id) {
+        cb({ error: 501, body: "deleteAsset.id expected" });
+        return;
+    }
+
+    /* Get asset handle first - from that we'll get the other components
+     */
+    db.getDoc(params.id,
+            function(error, assetHandle) {
+                if (error) {
+                    cb({ error: 500, body: JSON.stringify(error) });
+
+                } else {
+
+                    /* Delete asset metadata
+                     */
+                    db.getDoc(assetHandle.assetMetaId,
+                            function(error, assetMeta) {
+                                if (error) {
+                                    cb({ error: 500, body: JSON.stringify(error) });
+
+                                } else {
+
+                                    log("Deleting asset-meta " + assetMeta._id);
+
+                                    log(JSON.stringify(assetMeta))
+                                    db.removeDoc(assetMeta._id, assetMeta._rev,
+                                            function(error, result) {
+                                                if (error) {
+                                                    log("FAILED to delete asset " + assetHandle._id + " asset-meta " + assetMeta._id + ": " + JSON.stringify(error));
+                                                }
+
+                                                /* Delete asset assembly
+                                                 */
+                                                db.getDoc(assetHandle.assetAssemblyId,
+                                                        function(error, assetAssembly) {
+                                                            if (error) {
+                                                                cb({ error: 500, body: JSON.stringify(error) });
+
+                                                            } else {
+
+                                                                log("Deleting asset-assembly " + assetAssembly._id);
+
+                                                                db.removeDoc(assetAssembly._id, assetAssembly._rev,
+                                                                        function(error, result) {
+                                                                            if (error) {
+                                                                                log("FAILED to delete asset " + assetHandle._id + " asset-assembly " + assetAssembly._id + ": " + JSON.stringify(error));
+                                                                            }
+
+                                                                            /* Delete asset body
+                                                                             */
+                                                                            db.getDoc(assetHandle.assetBodyId,
+                                                                                    function(error, assetBody) {
+                                                                                        if (error) {
+                                                                                            cb({ error: 500, body: JSON.stringify(error) });
+
+                                                                                        } else {
+
+                                                                                            log("Deleting asset-body " + assetBody._id);
+
+                                                                                            db.removeDoc(assetBody._id, assetBody._rev,
+                                                                                                    function(error, result) {
+                                                                                                        if (error) {
+                                                                                                            log("FAILED to delete asset " + assetHandle._id + " asset-body " + assetBody._id + ": " + JSON.stringify(error));
+                                                                                                        }
+
+                                                                                                        /* Delete asset handle
+                                                                                                         */
+                                                                                                        db.removeDoc(assetHandle._id, assetHandle._rev,
+                                                                                                                function(error, result) {
+                                                                                                                    if (error) {
+                                                                                                                        log("FAILED to delete asset handle " + assetHandle._id + ": " + JSON.stringify(error));
+                                                                                                                    }
+
+                                                                                                                    /* Remove images dir
+                                                                                                                     */
+                                                                                                                    log("Removing images dir " + assetMeta.images.imagesDir);
+                                                                                                                    rmdirrf.rm(assetMeta.images.imagesDir, function(error) {
+                                                                                                                        if (error) {
+                                                                                                                            log("FAILED to remove images dir " + assetMeta.images.imagesDir + ": " + error);
+                                                                                                                        }
+                                                                                                                    });
+                                                                                                                });
+                                                                                                    });
+                                                                                        }
+                                                                                    });
+                                                                        });
+                                                            }
+                                                        });
+                                            });
+                                }
+                            });
+                }
+            });
+};
+
+
+function deleteDoc(id, cb) {
+    db.getDoc(id,
+            function(error, doc) {
+                if (error) {
+                    cb(error);
+                } else {
+                    db.removeDoc(doc.assetBodyId, doc.rev,
+                            function(error, result) {
+                                if (error) {
+                                    log("FAILED to delete document " + id + ": " + JSON.stringify(error));
+                                }
+                            });
+                }
+            });
+}
+
+
+/*---------------------------------------------------------------------------------------------------------------------
+ * Returns entire set of asset category tags
+ *
+ *--------------------------------------------------------------------------------------------------------------------*/
 exports.getAssetTags = function(params, cb) {
     log("getAssetTags");
     db.view("asset-meta", "all_tags", {},
@@ -415,9 +573,13 @@ exports.getAssetTags = function(params, cb) {
             });
 };
 
+/*---------------------------------------------------------------------------------------------------------------------
+ * Returns entire   
+ *
+ *--------------------------------------------------------------------------------------------------------------------*/
 exports.getAssets = function(params, cb) {
     log("getAssets");
-    db.view("asset-meta", "all-assets", {},
+    db.view("asset-meta", "all_assets", {},
             function(error, tags) {
                 if (error) {
                     cb({ error: 500, body: JSON.stringify(error) });
@@ -436,6 +598,10 @@ exports.getAssets = function(params, cb) {
 //};
 
 
+/*---------------------------------------------------------------------------------------------------------------------
+ *
+ *
+ *--------------------------------------------------------------------------------------------------------------------*/
 exports.getAssetsForTags = function(params, cb) {
     if (!params.tags) {
         cb({ error: 501, body: "getAssetsForTags.tags expected" });
@@ -540,8 +706,8 @@ exports.getAssetAssembly = function(params, cb) {
 };
 
 exports.getAsset = function(params, cb) {
-    if (!params.id) {
-        cb({ error: 501, body: "getAsset.id expected" });
+    if (!params.id || params.name) {
+        cb({ error: 501, body: "getAsset.id or getAsset.name expected" });
         return;
     }
 
@@ -550,7 +716,11 @@ exports.getAsset = function(params, cb) {
         return;
     }
 
-    log("getAsset id: " + params.id + ", pkg: " + params.pkg);
+    if (params.id) {
+        log("getAsset id: " + params.id + ", pkg: " + params.pkg);
+    } else {
+        log("getAsset name: " + params.name + ", pkg: " + params.pkg);
+    }
 
     /* Get asset handle first
      */
