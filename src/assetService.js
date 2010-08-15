@@ -42,6 +42,7 @@ var url = require('url');
 var qs = require('querystring');
 
 var assetStore = require('./assets/assetStore');
+var assetMap = require('./map/assetMap');
 
 var settings;
 var server;
@@ -75,7 +76,9 @@ exports.start = function(customSettings, cb) {
     settings = customSettings || {};
     settings.__proto__ = exports.defaultSettings;
 
-    assetStore.start(settings);
+    assetMap.start(settings, function() {
+        assetStore.start(settings);
+    });
 
     createDummyContent();
 
@@ -146,6 +149,7 @@ exports.start = function(customSettings, cb) {
                                 resultStr = JSON.stringify(result);
 
                             } else {
+                                log("AssetServer READY");
                                 switch (result.format) {
 
                                     /* Naked unbodied response from asset store,
@@ -191,21 +195,97 @@ function parseMessage(message, ok, er) {
     }
 }
 
-function service(params, callback) {
+function service(params, cb) {
     if (!params.cmd) {
-        callback({
+        cb({
             error: 501,
             body: "I need a cmd!"
         });
     } else {
-        var fn = assetStore[params.cmd];
-        if (!fn) {
-            callback({
-                error: 501,
-                body: "I dont know that cmd: '" + params.cmd + "'"
-            });
-        } else {
-            fn(params, callback);
+
+        switch (params.cmd) {
+
+            case "createAsset":
+
+                /* Create asset in AssetStore, then if it has spatial metadata insert it into AssetMap
+                 */
+                assetStore.createAsset(
+                        params,
+                        function(result) {
+                            if (result.error) {
+                                cb(result);
+                            } else {
+
+                                /* Asset created
+                                 */
+                                var assetMeta = result.body;
+                                if (assetMeta.spatial && assetMeta.spatial.boundary) {
+
+                                    /* Asset has spatial metadata - insert into AssetMap
+                                     */
+                                    assetMap.insertAsset({
+                                        assetId:assetMeta.assetId,
+                                        boundary:assetMeta.spatial.boundary
+                                    },
+                                            function(mapResult) {
+                                                if (mapResult.error) {
+
+                                                    /* Just log AssetMap insertion failure, but keep asset
+                                                     */
+                                                    log("FAILED to insert asset into AssetMap: " + mapResult.error);
+                                                }
+                                                cb(result);
+                                            });
+                                } else {
+
+                                    /* Asset has no spatial metadata
+                                     */
+                                    log("AssetService : not inserting asset '" + assetMeta.assetId + "' into AssetMap - no assetMeta.spatial or assetMeta.spatial.boundary");
+                                    cb(result);
+                                }
+                            }
+                        });
+                break;
+
+            case "getAssetTags":
+                assetStore.getAssetTags(params, cb);
+                break;
+
+            case "getAsset":
+                assetStore.getAsset(params, cb);
+                break;
+
+            case "getAssetMeta":
+                assetStore.getAssetMeta(params, cb);
+                break;
+
+            case "getAssetAssembly":
+                assetStore.getAssetAssembly(params, cb);
+                break;
+
+            case "getAssets":
+                assetStore.getAssets(params, cb);
+                break;
+
+            // Authentication needed here
+            //
+            //            case "deleteAsset":
+            //                assetStore.deleteAsset(params, cb);
+            //                return;
+
+            case "getAssetMap":
+                assetMap.getAssetMap(params, cb);
+                break;
+
+            case "getAssetMapBoundingBoxes" :
+                assetMap.getAssetMapBoundingBoxes(params, cb);
+                break;
+
+            default:
+                cb({
+                    error: 501,
+                    body: "I dont know that cmd: '" + params.cmd + "'"
+                });
         }
     }
 }
@@ -216,6 +296,7 @@ function wrapInCallback(callback, str) {
 
 
 function createDummyContent() {
+
 
     //    assetStore.deleteAsset({
     //        id :"org.scenejs.examples.collada.seymourplane"
@@ -235,43 +316,58 @@ function createDummyContent() {
     //                }
     //            });
 
-//    assetStore.createAsset({
-//        meta : {
-//            name :"org.scenejs.examples.collada.seymourplane",
-//            description: "The Seymour Plane test model",
-//            tags : ["collada", "example", "zoofers", "zafus"]
-//        },
-//        assembly : {
-//            type : "dae",
-//            source: {
-//                url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
-//            }
-//        }});
-//
-//    assetStore.createAsset({
-//        meta : {
-//            name :"org.scenejs.examples.collada.house",
-//            description: "House model from VAST Architecture",
-//            tags : ["collada", "example", "gizangos"]
-//        },
-//        assembly : {
-//            type : "dae",
-//            source: {
-//                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
-//            }
-//        }});
-//
-//    assetStore.createAsset({
-//        meta : {
-//            name :"org.scenejs.examples.scenejs.spiralstairs",
-//            description: "Procedurally-generated spiral staircase",
-//            tags : ["collada", "example", "gizangos"]
-//        },
-//        assembly : {
-//            type : "scenejs",
-//            source: {
-//                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
-//            },
-//            images: []
-//        }});
+    service({
+        cmd: "createAsset",
+        meta : {
+            name :"org.scenejs.examples.collada.seymourplane",
+            description: "The Seymour Plane test model",
+            tags : ["collada", "example", "zoofers", "zafus"]
+        },
+        assembly : {
+            type : "dae",
+            source: {
+                url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
+            }
+        }}, function (result) {
+
+    });
+    //
+
+    service({
+        cmd:"createAsset",
+        meta : {
+            name :"org.scenejs.examples.collada.house",
+            description: "House model from VAST Architecture",
+            tags : ["collada", "example", "gizangos"]
+        },
+        assembly : {
+            type : "dae",
+            source: {
+                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
+            },
+            transforms : {
+                center: true,
+                position: { x: 1000.0 }
+            }
+        }
+    }, function(result) {
+
+    });
+    //
+    //    service({
+    //        cmd:"createAsset",
+    //        meta : {
+    //            name :"org.scenejs.examples.scenejs.spiralstairs",
+    //            description: "Procedurally-generated spiral staircase",
+    //            tags : ["collada", "example", "gizangos"]
+    //        },
+    //        assembly : {
+    //            type : "scenejs-node",
+    //            source: {
+    //                url: "http://scenejs.org/library/v0.7/assets/examples/spiral-staircase/spiral-stairs-subgraph.js"
+    //            },
+    //            images: []
+    //        }}, function(result) {
+    //
+    //    });
 }
