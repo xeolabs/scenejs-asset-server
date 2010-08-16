@@ -41,7 +41,7 @@ var ws = require('../lib/ws');
 var url = require('url');
 var qs = require('querystring');
 
-var assetStore = require('./assets/assetStore');
+var assetStore = require('./store/assetStore');
 var assetMap = require('./map/assetMap');
 
 var settings;

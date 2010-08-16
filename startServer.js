@@ -30,7 +30,7 @@
 
 
 var fs = require('fs');
-var assetService = require('./src/assetService');
+var assetService = require('./server/src/assetService');
 var sys = require('sys');
 
 fs.readFile(process.argv[2] || './settings.json', function(err, data) {

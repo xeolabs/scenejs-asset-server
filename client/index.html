@@ -1,0 +1,193 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>Asset Server kd-Tree Browser Client</title>
+    <script type="text/javascript" src="lib/scenejs-0.7.7.min.js"></script>
+    <script type="text/javascript" src="lib/sylvester.js"></script>
+</head>
+<body>
+<table>
+    <tr>
+        <td valign="top">
+            <canvas id="theCanvas" width="900" height="900">
+                <p>This example requires a browser that supports the
+                    <a href="http://www.w3.org/html/wg/html5/">HTML5</a>
+                    &lt;canvas&gt; feature.</p>
+            </canvas>
+        </td>
+        <td valign="top">
+            <h1>Asset Server kd-Tree Browser</h1>
+
+            <div id="theLoggingDiv"></div>
+        </td>
+    </tr>
+</table>
+
+<script type="text/javascript">
+    SceneJS.requireModule("modules/kdclient.js?d=dff");
+
+    var exampleScene = SceneJS.scene({
+        canvasId: "theCanvas",              // Bind to WebGL canvas
+        loggingElementId: "theLoggingDiv"   // Bind to logging DIV
+    },
+
+
+        /* View transform - takes viewing parameters through the data passed
+         * into this scene as it is rendered. Those parameters are generated
+         * in mouse handlers outside the scene graph - see below.
+         */
+            SceneJS.lookAt(function(data) {
+                return {
+                    eye : data.get("eye"),
+                    look : data.get("look"),
+                    up : { y: 1.0 }
+                };
+            },
+                    SceneJS.camera({
+                        optics: {
+                            type: "perspective",
+                            fovy : 45.0,
+                            aspect : 1.0,
+                            near : 0.10,
+                            far : 7000.0  }
+                    },
+                            SceneJS.lights({
+                                sources: [
+                                    {
+                                        type:                   "dir",
+                                        color:                  { r: 1.0, g: 1.0, b: 1.0 },
+                                        diffuse:                true,
+                                        specular:               true,
+                                        dir:                    { x: 1.0, y: 1.0, z: -1.0 }
+                                    },
+                                    {
+                                        type:                   "dir",
+                                        color:                  { r: 0.8, g: 0.8, b: 0.8 },
+                                        diffuse:                true,
+                                        specular:               true,
+                                        dir:                    { x: 2.0, y: 1.0, z: 0.0 }
+                                    }
+                                ]},
+
+                                /* Use kd-tree client module
+                                 */
+                                    SceneJS.useModule({
+                                        name: "org.scenejs.kdclient",
+                                        params : {
+                                            serverURI : "ws://127.0.0.1:8888/"
+                                        }
+                                    }))
+                            )
+                    )
+            );
+
+    /*----------------------------------------------------------------------
+     * Scene rendering loop and mouse handler stuff follows
+     *---------------------------------------------------------------------*/
+
+    var eye = { x: 0, y: 10, z: -150 };
+    var look = { x :  0, y: 20, z: 0 };
+    var speed = 0;
+    var yaw = 0;
+    var pitch = 0;
+    var lastX;
+    var lastY;
+    var dragging = false;
+    var moveAngle = 0;
+    var moveAngleInc = 0;
+
+
+    /* Always get the canvas from the scene graph - it might bind to
+     * a default one of it can't find the one specified.
+     */
+    var canvas = document.getElementById(exampleScene.getCanvasId());
+
+    function mouseDown(event) {
+        lastX = event.clientX;
+        lastY = event.clientY;
+        dragging = true;
+    }
+
+    function mouseUp() {
+        dragging = false;
+        speed = 0;
+        moveAngleInc = 0;
+    }
+
+    /* On a mouse drag, we'll re-render the scene, passing in
+     * incremented angles in each time.
+     */
+    function mouseMove(event) {
+        if (!lastX) {
+            lastX = event.clientX;
+            lastY = event.clientY;
+        }
+        if (dragging) {
+            moveAngleInc = (event.clientX - lastX) * 0.002;
+            speed = (lastY - event.clientY) * 0.01;
+        }
+    }
+
+    function mouseWheel(event) {
+        var delta = 0;
+        if (!event) event = window.event;
+        if (event.wheelDelta) {
+            delta = event.wheelDelta / 120;
+            if (window.opera) delta = -delta;
+        } else if (event.detail) {
+            delta = -event.detail / 3;
+        }
+        if (delta) {
+            if (delta < 0) {
+                speed -= 0.2
+            } else {
+                speed += 0.2
+            }
+        }
+        if (event.preventDefault)
+            event.preventDefault();
+        event.returnValue = false;
+    }
+
+    canvas.addEventListener('mousedown', mouseDown, true);
+    canvas.addEventListener('mousemove', mouseMove, true);
+    canvas.addEventListener('mouseup', mouseUp, true);
+    canvas.addEventListener('mousewheel', mouseWheel, true);
+
+    window.render = function() {
+        moveAngle -= moveAngleInc;
+
+        /* Using Sylvester Matrix Library to create this matrix
+         */
+        var rotMat = Matrix.Rotation(moveAngle * 0.0174532925, $V([0,1,0]));
+        var moveVec = rotMat.multiply($V([0,0,1])).elements;
+        if (speed) {
+
+            eye.x += moveVec[0] * speed;
+            eye.z += moveVec[2] * speed;
+        }
+        exampleScene
+                .setData({ eye : eye, look: { x: eye.x + moveVec[0], y: eye.y, z : eye.z + moveVec[2] }})
+                .render();
+    };
+
+    /* Render loop until error or reset
+     * (which IDE does whenever you hit that run again button)
+     */
+    var pInterval;
+
+    SceneJS.addListener("error", function(e) {
+        alert(e.exception.message);
+        window.clearInterval(pInterval);
+    });
+
+    SceneJS.addListener("reset", function() {
+        window.clearInterval(pInterval);
+    });
+
+    pInterval = window.setInterval("window.render()", 10);
+
+</script>
+</body>
+</html>
