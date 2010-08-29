@@ -34,7 +34,7 @@ var http = require("http");
 var url = require("url");
 var log = require('../../lib/log').log;
 var uuid = require('../../lib/uuid');
-var jsonUtils = require('../../lib/scenejs-utils/scenejs-json-utils');
+var jsonUtils = require('../../lib/scenejs-utils/scenejs-js-utils');
 var couchdb = require('../../lib/node-couchdb/couchdb'); // Node-CouchDB: http://github.com/felixge/node-couchdb
 var mkdirp = require('../../lib/npm/mkdir-p');
 var rmdirrf = require('../../lib/npm/rm-rf');
@@ -62,39 +62,45 @@ exports.start = function(_settings, cb) {
     }
     ensureDirExists(settings.attachmentsDir);
 
+    log("SceneServer.AssetStore: attachmentsDir     = " + settings.attachmentsDir);
+    log("SceneServer.AssetStore: attachmentsBaseURL = " + settings.attachmentsBaseURL);
+
     /* Connect to CouchDB    
      */
-    log("AssetServer.AssetStore: connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
+    log("SceneServer.AssetStore: connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
     try {
         client = couchdb.createClient(settings.db.port, settings.db.host);
         db = client.db(DB_NAME);
     } catch (e) {
-        throw "AssetStore failed to connect to CouchDB: " + e;
+        throw "SceneServer.AssetStore failed to connect to CouchDB: " + e;
     }
 
     /* Create DB if not existing
      */
-    db.exists(function(error, exists) {
-        if (error) {
-            throw JSON.stringify(error);
-        }
-        if (!exists) {
-
-            log("AssetServer.AssetStore: did not find DB '" + DB_NAME + "' - that's OK I'll make one..");
-
-            db.create(function(error) {
-                log("AssetServer.AssetStore: creating DB '" + DB_NAME + "'");
+    db.exists(
+            function(error, exists) {
                 if (error) {
-                    log("AssetServer.AssetStore: failed to create CouchDB database: " + JSON.stringify(error));
-                    throw "AssetStore failed to create CouchDB database";
+                    throw JSON.stringify(error);
                 }
-                if (cb) {
-                    cb();
+                if (!exists) {
+
+                    log("SceneServer.AssetStore: did not find DB '" + DB_NAME + "' - that's OK I'll make one..");
+
+                    db.create(
+                            function(error) {
+                                log("SceneServer.AssetStore: creating DB '" + DB_NAME + "'");
+                                if (error) {
+                                    log("SceneServer.AssetStore: failed to create CouchDB database: " + JSON.stringify(error));
+                                    throw "AssetStore failed to create CouchDB database";
+                                }
+                                if (cb) {
+                                    cb();
+                                }
+                            });
                 }
             });
-        }
-    });
 };
+
 
 function ensureDirExists(dir) {
     path.exists(dir, function(exists) {
@@ -111,7 +117,7 @@ function ensureDirExists(dir) {
 /*---------------------------------------------------------------------------------------------------------------------
  * Creates new asset. This creates four records for the new asset: body, assembly, metadata and handle. These
  * creations are done in a chain, in that order. Also creates an attachments directory (path specified in settings)
- * and downloads all images referenced in the asset source file(s) into that.
+ * and downloads all attachments referenced in the asset source file(s) into that.
  *
  * Cleans up on error by unmaking all documents/directories/files that were successfully made.
  *--------------------------------------------------------------------------------------------------------------------*/
@@ -133,7 +139,7 @@ exports.createAsset = function(params, cb) {
     } else if (!params.assembly.source.url) {
         cb({ error: 501, body: "createAsset.assembly.source.url expected" });
     } else {
-        log("AssetServer.AssetStore: createAsset");
+        log("SceneServer.AssetStore: createAsset");
 
         var builder = builders.getBuilder(params.assembly.type);
         if (!builder) {
@@ -142,17 +148,37 @@ exports.createAsset = function(params, cb) {
                 body: "asset type not supported: assembly.type '" + params.assembly.type + "'"
             });
         } else {
+
+            var dirName = uuid.uuidFast() + "/";
+            var storage = {
+                attachmentsDir: settings.attachmentsDir + dirName,
+                attachmentsBaseURL : settings.attachmentsPath + dirName
+            };
+
+            log("SceneServer.AssetStore: createAsset attachmentsDir     = " + storage.attachmentsDir);
+            log("SceneServer.AssetStore: createAsset attachmentsBaseURL = " + storage.attachmentsBaseURL);
+
             builder.build(
-                    params.assembly,
+                    params,
+                    storage,
+
                     function(builderProduct) {
                         if (builderProduct.error) {
                             cb(builderProduct);
                         } else {
-                            createAssetBody(params, builderProduct,
+
+
+                            /* Save asset
+                             */
+                            createAssetBody(
+                                    params,
+                                    storage,
+                                    builderProduct,
+
                                     function(result) {
                                         if (result.error) {
                                         } else {
-                                            log("AssetServer.AssetStore: asset created OK: result=" + JSON.stringify(result));
+                                            log("SceneServer.AssetStore: asset created OK: result=" + JSON.stringify(result));
                                         }
                                         if (cb) {
                                             cb(result);
@@ -168,9 +194,14 @@ exports.createAsset = function(params, cb) {
  * We start by creating the body because it's the part that is most likely to fail
  * because it involves fetching and parsing the target file.
  */
-function createAssetBody(params, builtProduct, cb) {
+function createAssetBody(
+        params, // request
+        storage, // how server stores it
+        builtProduct, // asset body
+        cb) {
+
     var id = "asset-body-" + uuid.uuidFast();
-    log("AssetServer.AssetStore: creating asset body: " + id);
+    log("SceneServer.AssetStore: creating asset body: " + id);
 
     /* Create body
      */
@@ -183,27 +214,27 @@ function createAssetBody(params, builtProduct, cb) {
                 /* Failed
                  */
                 if (error) {
-                    log("AssetServer.AssetStore: FAILED to create asset-body " + id + ": " + JSON.stringify(error));
+                    log("SceneServer.AssetStore: FAILED to create asset-body " + id + ": " + JSON.stringify(error));
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
                     /* Create assembly
                      */
-                    createAssetAssembly(params, builtProduct, assetBody,
+                    createAssetAssembly(params, storage, builtProduct, assetBody,
                             function(result) {
                                 if (result.error) {
 
                                     /* Failed - remove asset body
                                      */
-                                    log("AssetServer.AssetStore: deleting asset-body " + assetBody.id);
+                                    log("SceneServer.AssetStore: deleting asset-body " + assetBody.id);
                                     db.removeDoc(assetBody.id, assetBody.rev,
                                             function(error, result) {
                                                 if (error) {
-                                                    log("AssetServer.AssetStore: FAILED to delete asset-body " + assetBody.id + ": " + JSON.stringify(error));
+                                                    log("SceneServer.AssetStore: FAILED to delete asset-body " + assetBody.id + ": " + JSON.stringify(error));
                                                 }
                                             });
                                 } else {
-                                    log("AssetServer.AssetStore: asset-body created OK: " + id);
+                                    log("SceneServer.AssetStore: asset-body created OK: " + id);
                                 }
                                 if (cb) {
                                     cb(result);
@@ -220,9 +251,9 @@ function createAssetBody(params, builtProduct, cb) {
  * @param assetBody
  * @param cb
  */
-function createAssetAssembly(params, builtProduct, assetBody, cb) {
+function createAssetAssembly(params, storage, builtProduct, assetBody, cb) {
     var id = "asset-assembly-" + uuid.uuidFast();
-    log("AssetServer.AssetStore: creating asset assembly: " + id);
+    log("SceneServer.AssetStore: creating asset assembly: " + id);
 
     /* Create assembly
      */
@@ -240,27 +271,27 @@ function createAssetAssembly(params, builtProduct, assetBody, cb) {
 
                     /* Failed
                      */
-                    log("AssetServer.AssetStore: FAILED to create asset-assembly " + id + ": " + error);
+                    log("SceneServer.AssetStore: FAILED to create asset-assembly " + id + ": " + error);
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
 
-                    /* Create images and metadata
+                    /* Create attachments and metadata
                      */
-                    saveAssetImages(params, builtProduct, assetBody, assembly,
+                    saveAssetAttachments(params, storage, builtProduct, assetBody, assembly,
                             function(result) {
                                 if (result.error) {
 
                                     /* Failed - uncreate assembly
                                      */
-                                    log("AssetServer.AssetStore: deleting asset-assembly " + assembly.id);
+                                    log("SceneServer.AssetStore: deleting asset-assembly " + assembly.id);
                                     db.removeDoc(assembly.id, assembly.rev,
                                             function(error, result) {
                                                 if (error) {
-                                                    log("AssetServer.AssetStore: FAILED to delete asset-assembly " + assembly.id + ": " + error);
+                                                    log("SceneServer.AssetStore: FAILED to delete asset-assembly " + assembly.id + ": " + error);
                                                 }
                                             });
                                 } else {
-                                    log("AssetServer.AssetStore: asset-assembly created OK: " + id);
+                                    log("SceneServer.AssetStore: asset-assembly created OK: " + id);
                                 }
                                 cb(result);
                             });
@@ -268,7 +299,7 @@ function createAssetAssembly(params, builtProduct, assetBody, cb) {
             });
 }
 
-/** Saves asset images then creates metadata
+/** Saves asset attachments then creates metadata
  *
  * @param params
  * @param builtProduct
@@ -276,10 +307,10 @@ function createAssetAssembly(params, builtProduct, assetBody, cb) {
  * @param assetAssembly
  * @param cb
  */
-function saveAssetImages(params, builtProduct, assetBody, assetAssembly, cb) {
-    saveImages(params, builtProduct,
+function saveAssetAttachments(params, storage, builtProduct, assetBody, assetAssembly, cb) {
+    saveAttachments(params, storage, builtProduct,
 
-            function(error, savedImages) {
+            function(error, savedAttachments) {
 
                 if (error) {
                     cb({ error: 500, body: JSON.stringify(error) });
@@ -288,20 +319,20 @@ function saveAssetImages(params, builtProduct, assetBody, assetAssembly, cb) {
 
                     /* Create metadata record
                      */
-                    createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedImages,
+                    createAssetMeta(params, storage, builtProduct, assetBody, assetAssembly, savedAttachments,
                             function(result) {
                                 if (result.error) {
 
-                                    /* Failed to create metadata - remove images dir
+                                    /* Failed to create metadata - remove attachments dir
                                      */
-                                    log("AssetServer.AssetStore: removing images dir " + savedImages.imagesDir);
-                                    rmdirrf.rm(savedImages.imagesDir, function(error) {
+                                    log("SceneServer.AssetStore: removing attachments dir " + savedAttachments.attachmentsDir);
+                                    rmdirrf.rm(savedAttachments.attachmentsDir, function(error) {
                                         if (error) {
-                                            log("AssetServer.AssetStore: FAILED to remove images dir " + savedImages.imagesDir + ": " + error);
+                                            log("SceneServer.AssetStore: FAILED to remove attachments dir " + savedAttachments.attachmentsDir + ": " + error);
                                         }
                                     });
                                 } else {
-                                    log("AssetServer.AssetStore: asset images saved OK");
+                                    log("SceneServer.AssetStore: asset attachments saved OK");
                                 }
                                 cb(result);
                             });
@@ -309,32 +340,30 @@ function saveAssetImages(params, builtProduct, assetBody, assetAssembly, cb) {
             });
 }
 
-function saveImages(params, builtProduct, cb) {
-    var imagesDir = settings.attachmentsDir + "/" + uuid.uuidFast() + "/";
-    fs.mkdir(imagesDir, 0755,
+function saveAttachments(params, storage, builtProduct, cb) {
+    fs.mkdir(storage.attachmentsDir, 0755,
             function(error) {
                 if (error) {
-                    log("AssetServer.AssetStore: FAILED to create images dir " + imagesDir + ": " + error);
+                    log("SceneServer.AssetStore: FAILED to create attachments dir " + storage.attachmentsDir + ": " + error);
                     cb({ error: error });
                 } else {
-                    var savedImages = {
+                    var savedAttachments = {
                         imageList : []
                     };
                     var attachments = builtProduct.body.attachments || [];
                     try {
-                        fetchAttachments(imagesDir, attachments, 0, savedImages,
+                        fetchAttachments(storage.attachmentsDir, attachments, 0, savedAttachments,
                                 function() {
-                                    cb(null, { imagesDir: imagesDir, savedImages: savedImages.imageList });
+                                    cb(null, { attachmentsDir: storage.attachmentsDir, savedAttachments: savedAttachments.imageList });
                                 });
                     } catch (e) {
-                        rmdirrf.rm(imagesDir,
+                        rmdirrf.rm(storage.attachmentsDir,
                                 function(error) {
                                     if (error) {
-                                        log("AssetServer.AssetStore: FAILED to remove images dir " + imagesDir + ": " + error);
+                                        log("SceneServer.AssetStore: FAILED to remove attachments dir " + storage.attachmentsDir + ": " + error);
                                     }
                                 });
                         cb({ error: e });
-                        return;
                     }
                 }
             });
@@ -346,27 +375,27 @@ function saveImages(params, builtProduct, cb) {
  * connections and file handles open. Since asset creation is likely done as
  * a batch process I can live with this.
  */
-function fetchAttachments(imagesDir, attachments, i, savedImages, cb) {
+function fetchAttachments(attachmentsDir, attachments, i, savedAttachments, cb) {
     if (i < attachments.length) {
-        fetchAttachment(imagesDir, attachments[i],
+        fetchAttachment(attachmentsDir, attachments[i],
                 function(error) {
                     if (error) {
-                        log("AssetServer.AssetStore: FAILED to fetch attachment " + attachments[i].name + ": " + error);
+                        log("SceneServer.AssetStore: FAILED to fetch attachment " + attachments[i].name + ": " + error);
                         throw error;
                     }
-                    savedImages.imageList.push(attachments[i].name);
-                    fetchAttachments(imagesDir, attachments, i + 1, savedImages, cb);
+                    savedAttachments.imageList.push(attachments[i].name);
+                    fetchAttachments(attachmentsDir, attachments, i + 1, savedAttachments, cb);
                 });
     } else {
         cb();
     }
 }
 
-function fetchAttachment(imagesDir, attachment, cb) {
+function fetchAttachment(attachmentsDir, attachment, cb) {
     var parts = url.parse(attachment.absPath);
     var twimg = http.createClient(80, parts.host);
     var request = twimg.request('GET', parts.pathname, { 'host': parts.host });
-    var writeStream = fs.createWriteStream(imagesDir + attachment.name, {
+    var writeStream = fs.createWriteStream(attachmentsDir + attachment.name, {
         'flags': 'w', 'encoding': 'binary','mode': 0666});
 
     request.addListener('response',
@@ -392,9 +421,9 @@ function fetchAttachment(imagesDir, attachment, cb) {
  * @param assetAssembly
  * @param cb
  */
-function createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedImages, cb) {
+function createAssetMeta(params, storage, builtProduct, assetBody, assetAssembly, savedAttachments, cb) {
     var id = "asset-meta-" + uuid.uuidFast();
-    log("AssetServer.AssetStore: creating asset meta: " + id);
+    log("SceneServer.AssetStore: creating asset meta: " + id);
     var asset = builtProduct.asset || {}; // Optional asset metadata found by parser
     db.saveDoc(id, {
         type : "asset-meta",
@@ -403,11 +432,11 @@ function createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedIm
         manifest : builtProduct.body.manifest || {},
         spatial : builtProduct.body.spatial || {},
         stats : builtProduct.body.stats || {},
-        images : savedImages
+        attachments : savedAttachments
     },
             function(error, assetMeta) {
                 if (error) {
-                    log("AssetServer.AssetStore: FAILED to create asset-meta " + id + ": " + error);
+                    log("SceneServer.AssetStore: FAILED to create asset-meta " + id + ": " + error);
                     cb({ error: 500, body: JSON.stringify(error) });
 
                 } else {
@@ -420,16 +449,16 @@ function createAssetMeta(params, builtProduct, assetBody, assetAssembly, savedIm
 
                                     /* Failed to create handle - uncreate metadata
                                      */
-                                    log("AssetServer.AssetStore: deleting asset-meta " + assetMeta.id);
+                                    log("SceneServer.AssetStore: deleting asset-meta " + assetMeta.id);
                                     db.removeDoc(assetMeta.id, assetMeta.rev,
                                             function(error, result) {
                                                 if (error) {
-                                                    log("AssetServer.AssetStore: FAILED to delete asset-meta " + assetMeta.id + ": " + JSON.stringify(error));
+                                                    log("SceneServer.AssetStore: FAILED to delete asset-meta " + assetMeta.id + ": " + JSON.stringify(error));
                                                 }
                                             });
                                     cb(result);
                                 } else {
-                                    log("AssetServer.AssetStore: asset-meta created OK: " + id);
+                                    log("SceneServer.AssetStore: asset-meta created OK: " + id);
                                     cb({ body: { assetId: result.body.id, spatial : builtProduct.body.spatial }});
                                 }
                             });
@@ -458,7 +487,7 @@ function mergeMaps(map1, map2) {
 function createAssetHandle(params, builtProduct, assetBody, assetAssembly, assetMeta, cb) {
     var id = params.meta.name.replace(/ /g, ".");
     //var id = "asset-" + uuid.uuidFast();
-    log("AssetServer.AssetStore: creating asset-handle: " + id);
+    log("SceneServer.AssetStore: creating asset-handle: " + id);
     db.saveDoc(id, {
         type : "asset-handle",
         name : params.meta.name || ((builtProduct.asset && builtProduct.asset.name) ? builtProduct.asset.name : id),
@@ -469,10 +498,10 @@ function createAssetHandle(params, builtProduct, assetBody, assetAssembly, asset
     },
             function(error, assetHandle) {
                 if (error) {
-                    log("AssetServer.AssetStore: FAILED to create asset-handle " + id + ": " + JSON.stringify(error));
+                    log("SceneServer.AssetStore: FAILED to create asset-handle " + id + ": " + JSON.stringify(error));
                     cb({ error: 500, body: JSON.stringify(error) });
                 } else {
-                    log("AssetServer.AssetStore: asset-handle created OK: " + id);
+                    log("SceneServer.AssetStore: asset-handle created OK: " + id);
                     cb({ body: { id: assetHandle.id } });
                 }
             });
@@ -507,13 +536,13 @@ exports.deleteAsset = function(params, cb) {
 
                                 } else {
 
-                                    log("AssetServer.AssetStore: deleting asset-meta " + assetMeta._id);
+                                    log("SceneServer.AssetStore: deleting asset-meta " + assetMeta._id);
 
                                     log(JSON.stringify(assetMeta))
                                     db.removeDoc(assetMeta._id, assetMeta._rev,
                                             function(error, result) {
                                                 if (error) {
-                                                    log("AssetServer.AssetStore: FAILED to delete asset " + assetHandle._id + " asset-meta " + assetMeta._id + ": " + JSON.stringify(error));
+                                                    log("SceneServer.AssetStore: FAILED to delete asset " + assetHandle._id + " asset-meta " + assetMeta._id + ": " + JSON.stringify(error));
                                                 }
 
                                                 /* Delete asset assembly
@@ -525,12 +554,12 @@ exports.deleteAsset = function(params, cb) {
 
                                                             } else {
 
-                                                                log("AssetServer.AssetStore: deleting asset-assembly " + assetAssembly._id);
+                                                                log("SceneServer.AssetStore: deleting asset-assembly " + assetAssembly._id);
 
                                                                 db.removeDoc(assetAssembly._id, assetAssembly._rev,
                                                                         function(error, result) {
                                                                             if (error) {
-                                                                                log("AssetServer.AssetStore: FAILED to delete asset " + assetHandle._id + " asset-assembly " + assetAssembly._id + ": " + JSON.stringify(error));
+                                                                                log("SceneServer.AssetStore: FAILED to delete asset " + assetHandle._id + " asset-assembly " + assetAssembly._id + ": " + JSON.stringify(error));
                                                                             }
 
                                                                             /* Delete asset body
@@ -542,12 +571,12 @@ exports.deleteAsset = function(params, cb) {
 
                                                                                         } else {
 
-                                                                                            log("AssetServer.AssetStore: deleting asset-body " + assetBody._id);
+                                                                                            log("SceneServer.AssetStore: deleting asset-body " + assetBody._id);
 
                                                                                             db.removeDoc(assetBody._id, assetBody._rev,
                                                                                                     function(error, result) {
                                                                                                         if (error) {
-                                                                                                            log("AssetServer.AssetStore: FAILED to delete asset " + assetHandle._id + " asset-body " + assetBody._id + ": " + JSON.stringify(error));
+                                                                                                            log("SceneServer.AssetStore: FAILED to delete asset " + assetHandle._id + " asset-body " + assetBody._id + ": " + JSON.stringify(error));
                                                                                                         }
 
                                                                                                         /* Delete asset handle
@@ -555,15 +584,15 @@ exports.deleteAsset = function(params, cb) {
                                                                                                         db.removeDoc(assetHandle._id, assetHandle._rev,
                                                                                                                 function(error, result) {
                                                                                                                     if (error) {
-                                                                                                                        log("AssetServer.AssetStore: FAILED to delete asset handle " + assetHandle._id + ": " + JSON.stringify(error));
+                                                                                                                        log("SceneServer.AssetStore: FAILED to delete asset handle " + assetHandle._id + ": " + JSON.stringify(error));
                                                                                                                     }
 
-                                                                                                                    /* Remove images dir
+                                                                                                                    /* Remove attachments dir
                                                                                                                      */
-                                                                                                                    log("AssetServer.AssetStore: removing images dir " + assetMeta.images.imagesDir);
-                                                                                                                    rmdirrf.rm(assetMeta.images.imagesDir, function(error) {
+                                                                                                                    log("SceneServer.AssetStore: removing attachments dir " + assetMeta.attachments.attachmentsDir);
+                                                                                                                    rmdirrf.rm(assetMeta.attachments.attachmentsDir, function(error) {
                                                                                                                         if (error) {
-                                                                                                                            log("AssetServer.AssetStore: FAILED to remove images dir " + assetMeta.images.imagesDir + ": " + error);
+                                                                                                                            log("SceneServer.AssetStore: FAILED to remove attachments dir " + assetMeta.attachments.attachmentsDir + ": " + error);
                                                                                                                         }
                                                                                                                     });
                                                                                                                 });
@@ -590,7 +619,7 @@ function deleteDoc(id, cb) {
                     db.removeDoc(doc.assetBodyId, doc.rev,
                             function(error, result) {
                                 if (error) {
-                                    log("AssetServer.AssetStore: FAILED to delete document " + id + ": " + JSON.stringify(error));
+                                    log("SceneServer.AssetStore: FAILED to delete document " + id + ": " + JSON.stringify(error));
                                 }
                             });
                 }
@@ -603,7 +632,7 @@ function deleteDoc(id, cb) {
  *
  *--------------------------------------------------------------------------------------------------------------------*/
 exports.getAssetTags = function(params, cb) {
-    log("AssetServer.AssetStore: getAssetTags");
+    log("SceneServer.AssetStore: getAssetTags");
     db.view("asset-meta", "all_tags", {},
             function(error, tags) {
                 if (error) {
@@ -622,7 +651,7 @@ exports.getAssetTags = function(params, cb) {
  *
  *--------------------------------------------------------------------------------------------------------------------*/
 exports.getAssets = function(params, cb) {
-    log("AssetServer.AssetStore: getAssets");
+    log("SceneServer.AssetStore: getAssets");
     db.view("asset-meta", "all_assets", {},
             function(error, tags) {
                 if (error) {
@@ -650,7 +679,7 @@ exports.getAssetsForTags = function(params, cb) {
     if (!params.tags) {
         cb({ error: 501, body: "getAssetsForTags.tags expected" });
     } else {
-        log("AssetServer.AssetStore: getAssetMeta tags:" + JSON.stringify(params.tags));
+        log("SceneServer.AssetStore: getAssetMeta tags:" + JSON.stringify(params.tags));
         db.getDoc(params.id,
                 function(error, assetHandle) {
                     if (error) {
@@ -688,7 +717,7 @@ exports.getAssetMeta = function(params, cb) {
     if (!params.id) {
         cb({ error: 501, body: "getAssetMeta.id expected" });
     } else {
-        log("AssetServer.AssetStore: getAssetMeta id:" + params.id);
+        log("SceneServer.AssetStore: getAssetMeta id:" + params.id);
         db.getDoc(params.id,
                 function(error, assetHandle) {
                     if (error) {
@@ -699,16 +728,15 @@ exports.getAssetMeta = function(params, cb) {
                                     if (error) {
                                         cb({ error: 500, body: JSON.stringify(error) });
                                     } else {
-                                        cb({ format: "json",
-                                            body:  JSON.stringify({    // Filter out couchdb id and rev
-                                                name : assetMeta.name,
-                                                description : assetMeta.description,
-                                                contributor : assetMeta.contributor,
-                                                tags : assetMeta.tags,
-                                                manifest : assetMeta.manifest,
-                                                spatial : assetMeta.spatial,
-                                                stats : assetMeta.stats
-                                            })
+                                        cb({ body:  { // Filtering out couchdb id and rev
+                                            name : assetMeta.name,
+                                            description : assetMeta.description,
+                                            contributor : assetMeta.contributor,
+                                            tags : assetMeta.tags,
+                                            manifest : assetMeta.manifest,
+                                            spatial : assetMeta.spatial,
+                                            stats : assetMeta.stats
+                                        }
                                         });
                                     }
                                 });
@@ -726,7 +754,7 @@ exports.getAssetAssembly = function(params, cb) {
     if (!params.id) {
         cb({ error: 501, body: "getAssetAssembly.id expected" });
     } else {
-        log("AssetServer.AssetStore: getAssetAssembly: " + params.id);
+        log("SceneServer.AssetStore: getAssetAssembly: " + params.id);
         db.getDoc(params.id,
                 function(error, assetHandle) {
                     if (error) {
@@ -755,13 +783,8 @@ exports.getAsset = function(params, cb) {
         return;
     }
 
-    if (!params.pkg) {
-        cb({ error: 501, body: "getAsset.pkg expected" });
-        return;
-    }
-
     if (params.id) {
-        log("AssetServer.AssetStore.getAsset id: " + params.id + ", pkg: " + params.pkg);
+        log("SceneServer.AssetStore.getAsset id: " + params.id);
     }
 
     /* Get asset handle first
@@ -790,24 +813,13 @@ exports.getAsset = function(params, cb) {
                                                     cb({ error: 500, body: JSON.stringify(error) });
 
                                                 } else {
-
-                                                    /* Package the asset body
-                                                     */
-                                                    switch (params.pkg) {
-                                                        case "socket" :
-                                                            assetPkgForSocket(params, assetMeta, assetBody, cb);
-                                                            break;
-
-                                                        case "module":
-                                                            assetPkgForModule(params, assetMeta, assetBody, cb);
-                                                            break;
-
-                                                        default:
-                                                            cb({
-                                                                error: 501,
-                                                                body: "I don't know that pkg: '" + params.pkg + "'"
-                                                            });
-                                                    }
+                                                    cb({
+                                                        format : "script",
+                                                        body:  JSON.stringify(
+                                                                fixAssetImageURLs(
+                                                                        assetBody.rootNode,
+                                                                        assetMeta.attachments.attachmentsDir))
+                                                    });
                                                 }
                                             });
                                 }
@@ -817,84 +829,27 @@ exports.getAsset = function(params, cb) {
 };
 
 
-/** Packages asset node for use by client SceneJS.Socket
- */
-function assetPkgForSocket(params, assetMeta, assetBody, cb) {
-
-    /* Madatory attachToNode param - prepend with hash required
-     * in the SceneJS.Socket configs map
-     */
-    var attachToNode = params.attachToNode ? params.attachToNode.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : null;
-    if (!attachToNode) {
-        cb({ error: 501, body: "getAsset.attachToNode expected" });
-        return;
-    }
-    attachToNode = attachToNode.charAt(0) == "#" ? attachToNode : "#" + attachToNode;
-
-    /* Optional symbolURI
-     */
-    var symbolURI = params.symbolURI ? params.symbolURI.replace(/^\s\s*/, '').replace(/\s\s*$/, '') : null;
-    if (symbolURI) {
-        if (symbolURI.length == 0) {
-            cb({
-                error: 501,
-                body: "getAsset.symbolURI is empty string"
-            });
-            return;
-        }
-        symbolURI = symbolURI.charAt(0) == "#" ? symbolURI : "#" + symbolURI;
-    }
-    cb({
-        format : "json",
-        //        body:  '   { ' +
-        //                       '        configs: {' +
-        //                       '            "#attachHere": {' +
-        //                       '                "+node" : SceneJS.node({ sid: "teapot" },' +
-        //                       '                        SceneJS.translate(' +
-        //                       '                            SceneJS.rotate({' +
-        //                       '                                   sid: "rotate",' +
-        //                       '                                    angle: 0,' +
-        //                       '                                    y : 1.0' +
-        //                       '                                },' +
-        //                       '                                SceneJS.objects.teapot())))' +
-        //                       '            }' +
-        //                       '       }' +
-        //                       '   }'
-        body: "{ configs: { " +
-              "\"" + attachToNode + "\": { \"+node\": " +
-              jsonUtils.packageAsFactoryFunc(assetBody.rootNode, {
-                  baseURL: assetMeta.images.imagesDir,
-                  symbolURI:params.symbolURI
-              }) +
-              " } } }"
-    });
-}
-
-function assetPkgForModule(params, assetMeta, assetBody, cb) {
-    cb({
-        format : "script",
-        body: jsonUtils.packageAsModule(
-                assetMeta.name,
-                assetBody.rootNode,
-                null,
-                assetMeta.images.imagesDir)  // TODO: comments option
-    });
-}
-
-exports.deleteAsset = function(params, builderProduct, cb) {
-    if (!params.assetMetaId) {
-        cb({ error: 501, body: "removeAsset.id expected" });
-    } else {
-        this.getAsset({
-            id: params.assetMetaId
-        },
-                function(result) {
-                    if (result.error) {
-                        cb(result);
-                    } else {
-
+function fixAssetImageURLs(node, urlBase) {
+    if (node) {
+        if (node.type == "texture") {
+            var cfg = node.cfg;
+            if (cfg) {
+                var layers = cfg.layers;
+                if (layers) {
+                    var layer;
+                    for (var i = 0; i < layers.length; i++) {
+                        layer = layers[i];
+                        layer.uri = urlBase + layer.uri;
                     }
-                });
+                }
+            }
+        }
+        var nodes = node.nodes;
+        if (nodes) {
+            for (var i = nodes.length; i >= 0; i--) {
+                fixAssetImageURLs(nodes[i], urlBase);
+            }
+        }
     }
-};
-
+    return node;
+}

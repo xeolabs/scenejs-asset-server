@@ -29,12 +29,16 @@ var url = require("url");
 var log = require('../../lib/log').log;
 var uuid = require('../../lib/uuid');
 var couchdb = require('../../lib/node-couchdb/couchdb'); // Node-CouchDB: http://github.com/felixge/node-couchdb
-var jsonLib = require('../../lib/scenejs-utils/scenejs-json-builder');
 
 var settings;
 var client;
 var db;
 
+/* Spatial extents of the kd-map
+ */
+//const MAP_BOUNDARY = { xmin: -2000, ymin: -2000, zmin: -2000, xmax: 600, ymax: 600, zmax: 600 };
+
+const MAP_BOUNDARY = { xmin: -30000, ymin: -30000, zmin: -30000, xmax: 1300, ymax: 1300, zmax: 1300 };
 /* Intersection results for kd-map
  */
 const INTERSECT_A_OUTSIDE_B = 0;
@@ -49,11 +53,11 @@ const MAX_DEPTH = 500;
 
 /* The kd-tree
  */
-var kdtree;
+var kdTree;
 
-/* Nodes in kd-tree, mapped to their IDs
+/* Node ID map
  */
-var nodes;
+var kdNodes = {};
 
 
 const DB_NAME = "scenejs-asset-map";
@@ -69,12 +73,12 @@ exports.start = function(_settings, cb) {
 
     /* Connect to DB
      */
-    log("AssetServer.AssetMap: connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
+    log("SceneServer.AssetMap: connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
     try {
         client = couchdb.createClient(settings.db.port, settings.db.host);
         db = client.db(DB_NAME);
     } catch (e) {
-        throw "AssetServer.AssetMap: FAILED to connect to CouchDB: " + e;
+        throw "SceneServer.AssetMap: FAILED to connect to CouchDB: " + e;
     }
 
     db.exists(
@@ -86,41 +90,40 @@ exports.start = function(_settings, cb) {
 
                     /* AssetMap DB not found
                      */
-                    log("AssetServer.AssetMap: did not find DB '" + DB_NAME + "' - that's OK I'll make one..");
+                    log("SceneServer.AssetMap: did not find DB '" + DB_NAME + "' - that's OK I'll make one..");
 
                     /* Create DB and map
                      */
                     db.create(
                             function(error) {
-                                log("AssetServer.AssetMap: creating DB '" + DB_NAME + "'");
+                                log("SceneServer.AssetMap: creating DB '" + DB_NAME + "'");
                                 if (error) {
-                                    log("AssetServer.AssetMap: failed to create CouchDB database: " + JSON.stringify(error));
-                                    throw "AssetServer.AssetMap: failed to create CouchDB database";
+                                    log("SceneServer.AssetMap: failed to create CouchDB database: " + JSON.stringify(error));
+                                    throw "SceneServer.AssetMap: failed to create CouchDB database";
                                 }
 
                                 /* Create map in DB - root node to begin with
                                  */
-                                log("AssetServer.AssetMap: creating map");
-                                kdtree = {
-                                    id: "root",
-                                    boundary: { xmin: -100000, ymin: -100000, zmin: -100000, xmax: 100000, ymax: 100000, zmax: 100000 },
+                                log("SceneServer.AssetMap: creating map");
+                                kdTree = {
+                                    id: uuid.uuidFast(),
+                                    boundary: MAP_BOUNDARY,
                                     assets: [
                                     ]
                                 };
-                                nodes = {
-                                    "root" : kdtree
-                                };
-                                db.saveDoc("kdtree", kdtree,
+                                kdNodes[kdTree.id] = kdTree;
+
+                                db.saveDoc("kdtree", kdTree,
                                         function(error, doc) {
                                             if (error) {
-                                                throw "AssetServer.AssetMap: failed to create kdtree: " + JSON.stringify(error);
+                                                throw "SceneServer.AssetMap: failed to create kdTree: " + JSON.stringify(error);
                                             }
 
                                             /* Keep the revision number so we can
                                              * overwrite - we only want one version
                                              */
-                                            kdtree.rev = doc.rev;
-                                            log("AssetServer.AssetMap: created kdtree OK: " + JSON.stringify(kdtree));
+                                            kdTree.rev = doc.rev;
+                                            log("SceneServer.AssetMap: created kdTree OK: " + JSON.stringify(kdTree));
                                             if (cb) {
                                                 cb();
                                             }
@@ -128,14 +131,12 @@ exports.start = function(_settings, cb) {
                             });
                 } else {
 
-                    /* DB exists - load kdtree
+                    /* DB exists - load kdTree
                      */
-                    loadMap(function(result) {
-                        if (result.error) {
-                            throw "AssetServer.AssetMap: failed to load kdtree from DB: " + error;
+                    loadMap(function(error) {
+                        if (error) {
+                            throw "SceneServer.AssetMap: failed to load kdTree from DB: " + error;
                         }
-                        kdtree = result.body;
-                        nodes = getMapNodeIds(kdtree);
                         if (cb) {
                             cb();
                         }
@@ -144,58 +145,107 @@ exports.start = function(_settings, cb) {
             });
 };
 
-/** Creates ID kdtree of kd-tree nodes
- */
-function getMapNodeIds(node, nodes) {
-    if (!nodes) {
-        nodes = {};
-    }
-    nodes[node.id] = node;
-    if (node.leftChild) {
-        getMapNodeIds(node.leftChild, nodes);
-    }
-    if (node.rightChild) {
-        getMapNodeIds(node.rightChild, nodes);
-    }
-    return nodes;
-}
-
-
-/** Loads kdtree
+/** Loads kdTree
  */
 function loadMap(cb) {
-    log("AssetServer.AssetMap: loading kdtree");
+    log("SceneServer.AssetMap: loading kdTree");
     db.getDoc("kdtree",
-            function(error, mapDoc) {
+            function(error, doc) {
                 if (error) {
-                    cb({ error: 500, body: JSON.stringify(error) });
+                    cb(JSON.stringify(error));
                 } else {
-                    cb({ body: mapDoc });
+                    kdTree = doc;
+                    kdNodes = {};
+                    buildNodeMap(kdTree);
+                    cb();
                 }
             });
 }
 
-/** Saves kdtree, overwriting existing document
+/* Builds map of kd-nodes to their IDs
+ */
+function buildNodeMap(node) {
+    kdNodes[node.id] = node;
+    if (node.leftChild) {
+        buildNodeMap(node.leftChild);
+    }
+    if (node.rightChild) {
+        buildNodeMap(node.rightChild);
+    }
+}
+
+/** Saves kdTree, overwriting existing document
  */
 function saveMap(cb) {
-    log("AssetServer.AssetMap: saving kdtree");
-    db.removeDoc("kdtree", kdtree.rev,
+    log("SceneServer.AssetMap: saving kdTree");
+    db.removeDoc("kdtree", kdTree.rev,
             function(error) {
                 if (error) {
-                    log("AssetMap failed to remove kdtree: " + JSON.stringify(error));
-                    throw "AssetMap failed to remove kdtree";
+                    log("SceneServer.AssetMap failed to remove kdTree: " + JSON.stringify(error));
+                    throw "SceneServer.AssetMap failed to remove kdTree";
                 }
-                kdtree.rev = undefined;  // Gross HACK
-                db.saveDoc("kdtree", kdtree,
+                kdTree.rev = undefined;  // Gross HACK
+                db.saveDoc("kdtree", kdTree,
                         function(error, doc) {
                             if (error) {
-                                log("AssetMap failed to save kdtree: " + JSON.stringify(error));
-                                throw "AssetMap failed to save kdtree";
+                                log("SceneServer.AssetMap failed to save kdTree: " + JSON.stringify(error));
+                                throw "SceneServer.AssetMap failed to save kdTree";
                             }
-                            kdtree.rev = doc.rev;
-                            cb(kdtree);
+                            kdTree.rev = doc.rev;
+                            cb(kdTree);
                         });
             });
+}
+
+/*---------------------------------------------------------------------------------------------------------------------
+ * Returns the IDs of assets intersecting the given boundary
+ *
+ *--------------------------------------------------------------------------------------------------------------------*/
+exports.getAssetsInBoundary = function(params, cb) {
+    var boundary;
+    if (params.xmin || params.ymin || params.xmin || params.xmax || params.ymax || params.zmax) {
+        if (!params.xmin || !params.ymin || !params.xmin || !params.xmax || !params.ymax || !params.zmax) {
+            cb({ error: 500, body: "getAssetsInBoundary boundary is incomplete" });
+            return;
+        }
+        if (params.xmin > params.xmax || params.ymin > params.ymax || params.zmin > params.zmax) {
+            cb({ error: 500, body: "getAssetsInBoundary boundary is inside-out" });
+            return;
+        }
+        boundary = {
+            xmin: params.xmin,
+            ymin: params.ymin,
+            zmin: params.zmin,
+            xmax: params.xmax,
+            ymax: params.ymax,
+            zmax: params.zmax
+        };
+        log("SceneServer.AssetMap: getAssetsInBoundary boundary=" + JSON.stringify(boundary));
+    } else {
+        log("SceneServer.AssetMap: getAssetsInBoundary");
+    }
+    var root = boundary ? findIsectNode(null, kdTree, boundary) : kdTree;
+    var assetIds = root ? getAssetIdsInSubtree(root) : [];
+    cb({ body: assetIds});
+};
+
+/**
+ * Descends the kd-subtree to collect the IDs of assets referenced therein
+ */
+function getAssetIdsInSubtree(node, assetIds) {
+    if (!assetIds) {
+        assetIds = [];
+    }
+    for (var i = 0; i < node.assets.length; i++) {
+        assetIds.push(node.assets[i].assetId);
+    }
+    if (node.leftChild) {
+        getAssetIdsInSubtree(node.leftChild, assetIds);
+    }
+    if (node.rightChild) {
+        getAssetIdsInSubtree(node.rightChild, assetIds);
+    }
+    return assetIds;
 }
 
 /*---------------------------------------------------------------------------------------------------------------------
@@ -203,52 +253,69 @@ function saveMap(cb) {
  *
  *--------------------------------------------------------------------------------------------------------------------*/
 exports.getAssetMap = function(params, cb) {
-    log("AssetServer.AssetMap: getAssetMap");
-    cb({ body: kdtree });
+    log("SceneServer.AssetMap: getAssetMap");
+    cb({ body: kdTree });
 };
 
 
 /*----------------------------------------------------------------------------------------------------------------------
- * Services a client scene graph Socket node's request for a tree of BoundingBoxes corresonding to the
- * asset kdtree kd-tree
+ * Returns JSON (sub)graph of SceneJS.KDNodes, either for entire kd-tree of a portion of it
  *
+ *   - subgraph is attached to given parent scene node
+ *   - subgraph is returned in a "cfg-node" message
+ *   - if a spatial region is given then the subgraph contains those kd-map nodes intersecting it
+ *   - if a kd-node ID is given then the subgraph contains those kd-nodes beneath that
  *--------------------------------------------------------------------------------------------------------------------*/
-exports.getAssetMapBoundingBoxes = function(params, cb) {
-    var boundary;
+exports.getKDGraph = function(params, cb) {
+    if (!params.parentNodeID) {
+        cb({ error: 500, body: "getKDGraph.parentNodeID missing" });
+        return;
+    }
+
+    var root;
     if (params.boundary) {
 
-        /* Get BoundingBoxes for a bounded section of the kd-tree
+        /* Get subgraph of KDNodes for a bounded section of the kd-tree
          */
-        boundary = params.boundary;
+        var boundary = params.boundary;
         if (!boundary.xmin || !boundary.ymin || !boundary.xmin || !boundary.xmax || !boundary.ymax || !boundary.zmax) {
-            cb("getAssetMapBoundingBoxes.boundary is incomplete");
+            cb({ error: 500, body: "getKDGraph.boundary is incomplete" });
             return;
         }
         if (boundary.xmin > boundary.xmax || boundary.ymin > boundary.ymax || boundary.zmin > boundary.zmax) {
-            cb("getAssetMapBoundingBoxes.boundary is inside-out");
+            cb({ error: 500, body: "getKDGraph.boundary is inside-out" });
             return;
         }
-        log("AssetServer.AssetMap: getAssetMapBoundingBoxes boundary=" + JSON.stringify(boundary));
+        log("SceneServer.AssetMap: getKDGraph boundary=" + JSON.stringify(boundary));
 
+        root = findIsectNode(null, kdTree, boundary);
+
+    } else if (params.kdNodeID) {
+        log("SceneServer.AssetMap: getKDGraph kdNodeID=" + kdNodeID);
+
+        root = kdNodes[params.kdNodeID];
 
     } else {
-        log("AssetServer.AssetMap: getAssetMapBoundingBoxes");
+        root = kdTree;
+        log("SceneServer.AssetMap: getKDGraph");
     }
 
-    var root = boundary ? findIsectNode(null, kdtree, boundary) : kdtree;
-    var builder = jsonLib.newBuilder({
-        numIndents: 4,
-        api : "function"
-    });
-    createBoundingBoxes(root, builder);  // TODO: cache bbox tree
-
-    log("XXXXXXXXXXXXXXXXXXXX " + JSON.stringify(builder.getJSON()));
+    var messages = [
+        {
+            name: "cfg-node",
+            params: {
+                nodeID: params.parentNodeID,
+                config: {
+                    "+node": buildKDGraph(root) // TODO: cache KDNodes
+                }
+            }
+        }
+    ];
+    var json = JSON.stringify(messages);
+    log(json)
     cb({
         format : "json",
-        body: "{ configs: { " +
-              "\"#assetMap\": { \"+node\": " +
-              builder.getJSON() +
-              " } } }"
+        body: json
     });
 };
 
@@ -283,59 +350,62 @@ function findIsectNode(parent, node, boundary) {
     }
 }
 
-/**
- * Returns JSON defining a BoundingBox hierarchy corresponding
- * to the given kd subtree
- *
- */
-function createBoundingBoxes(node, builder) {
-    builder.openNode("boundingBox", {
+function buildKDGraph(node) {
+    var sceneNode = {
+        type: "kdnode",
+        id: node.id,
         cfg: {
-            sid: node.id,
-
+            //            hasAssets: (node.assets && node.assets.length > 0),
+            isVisible : true,
+            assets: (node.assets && node.assets.length > 0) ? node.assets : undefined,
             xmin: node.boundary.xmin,
             ymin: node.boundary.ymin,
             zmin: node.boundary.zmin,
             xmax: node.boundary.xmax,
             ymax: node.boundary.ymax,
-            zmax: node.boundary.zmax,
-
-            listeners: {
-//                "state-changed" : function(params) {
-//                    this.fireEvent("isect-event", {
-//                        newState: params.newState
-//                    });
-//                }
-            }
-        }
-    });
+            zmax: node.boundary.zmax
+        },
+        nodes: []
+    };
     if (node.leftChild) {
-        createBoundingBoxes(node.leftChild, builder);
+        sceneNode.nodes = [
+            buildKDGraph(node.leftChild)
+        ];
     }
     if (node.rightChild) {
-        createBoundingBoxes(node.rightChild, builder);
+        if (!sceneNode.nodes) {
+            sceneNode.nodes = [];
+        }
+        sceneNode.nodes.push(buildKDGraph(node.rightChild));
     }
-    builder.closeNode();
+    return sceneNode;
 }
-
 
 /*----------------------------------------------------------------------------------------------------------------------
  * Services a request that notifies the server of batches of BoundingBox intersection state changes and gets
  * any assets the server then provides for kd-nodes that have either become visible or are likely to become visible
  *
  *--------------------------------------------------------------------------------------------------------------------*/
-exports.getAssetMapUpdates = function(params, getAssetFunc, cb) {
+exports.getAssetMapUpdates = function(params, cb) {
+    if (!params.events) {
+        cb({ error: 500, body: "getAssetMapUpdates.events missing" });
+        return;
+    }
+    const SERVER_URL = "http://" + settings.host + ":" + settings.port;
 
-    const SERVER_URL = "http://assets.scenejs.org"; // TODO: this server URL
+    log("SceneServer.AssetMap: getAssetMapUpdates");
 
-    log("AssetServer.AssetMap: getAssetMapUpdates");
-    var configs = {};                  // Asset updates in a configs object for SceneJS.Socket
+    var messages = [];
+
+    /* Process each event
+     */
     var len = params.events.length;
     var event;
     for (var i = 0; i < len; i++) {
         event = params.events[i];
 
-        switch (event.event) {
+        switch (event.name) {
+
             case "gone":
                 break;
 
@@ -343,86 +413,41 @@ exports.getAssetMapUpdates = function(params, getAssetFunc, cb) {
                 break;
 
             case "near":
-                var sids = event.nodeURI.split("/");
-                createConfigs(
-                        configs,
-                        kdtree,
-                        sids.slice(1), // Descend past Socket's "assetMap" child to the root BoundingBox
-                        event.nodeURI,
-                        getAssetFunc,
-                        function (error) {
-                            if (error) {
-                                cb({ error: 501, body: error });
-                            } else {
-                                cb({
-                                    format : "json",
-                                    body: "{ configs: " +
-                                          JSON.stringify(
-                                                  configs,
-                                                  function replacer(key, value) {
-                                                      if (typeof key === '+nodes') {
-                                                          var assetIds = value;
-                                                          var json = [];
-                                                          for (var i = assetIds.length - 1; i >= 0; i--) {
-                                                              json.push("SceneJS.kdAsset({ uri: \"" + // TODO: "pkg" mode for kdAsset node
-                                                                        SERVER_URL +
-                                                                        "?cmd=getAsset&assetId=" +
-                                                                        assetIds[i] +
-                                                                        "\" })");
-                                                          }
-                                                          return json.join(",");
-                                                      }
-                                                      return value;
-                                                  }) + "}"
-                                });
+            case "visible":
+
+                var node = kdNodes[event.params.nodeID];
+                if (!node) {
+                    log("kd-node not found: '" + event.params.nodeID + "'");
+                } else {
+                    var sceneNodes = [];
+                    for (var j = node.assets.length - 1; j >= 0; j--) {
+                        sceneNodes.push({
+                            type: "asset",
+                            cfg: {
+                                uri: SERVER_URL + "?cmd=getAsset&pkg=node&id=" + node.assets[j].assetId
                             }
                         });
-                break;
-
-            case "visible":
-                break;
-        }
-    }
-};
-
-
-/////////////// Allow +node values to be string JSON
-
-
-function createConfigs(configs, node, sids, nodeURI, getAssetFunc, cb) {
-    var id = sids[0];
-    var childNode = (id == "a") ? node.leftChild : node.rightChild;
-    if (childNode) {
-        var sid = "#" + id;
-        var childConfigs = configs[sid];         // Create configs submap if not yet existing
-        if (!childConfigs) {
-            childConfigs = configs[sid] = {};
-        }
-        if (sids.length == 1) {
-
-            /* At terminal BoundingBox - attach assets. For now we'll just attach
-             * an array of asset IDs - when we stringify the configs, we'll replace them
-             * with SceneJS.KDAsset nodes (as strings), that will pull the actual assets off the
-             * asset store via HTTP when the target scene is rendered.
-             */
-            if (node.assets.length > 0) {
-                var assetIds = childConfigs["+nodes"] = [];
-                for (var j = node.assets.length - 1; j >= 0; j--) {
-                    assetIds.push(node.assets[j].assetId);
+                    }
+                    messages.push({
+                        name: "cfg-node",
+                        params: {
+                            nodeID: event.params.nodeID,
+                            config: {
+                                "+nodes": sceneNodes
+                            }
+                        }
+                    });
                 }
-            }
 
-        } else {
-            createConfigs(
-                    childConfigs,
-                    childNode,
-                    sids.slice(1), // Descend to next BoundingBox down on SID path
-                    nodeURI,
-                    getAssetFunc,
-                    cb);
+                break;
         }
     }
-}
+    var json = JSON.stringify(messages);
+    cb({
+        // format : "json",
+        body: json
+    });
+};
 
 /*---------------------------------------------------------------------------------------------------------------------
  * Inserts an asset into the Asset Map
@@ -439,23 +464,20 @@ exports.insertAsset = function(params, cb) {
         cb({ error: 501, body: "insertAsset.boundary" });
     } else {
 
-        log("AssetServer.AssetMap: insertAsset - " + JSON.stringify(params));
+        log("SceneServer.AssetMap: insertAsset - " + JSON.stringify(params));
         var asset = { assetId: params.assetId, boundary: params.boundary };
-        if (insertAsset(kdtree, asset, 0, 0)) {
+        if (insertAsset(kdTree, asset, 0, 0)) {
             saveMap(function() {
-                log("AssetMap insertAsset - OK");
+                log("SceneServer.AssetMap insertAsset - OK");
                 cb({ body: {} });
             });
         } else {
-            cb({ error: 501, body: "AssetServer.AssetMap: insertAsset FAILED - outside of kdtree boundary!" });
+            cb({ error: 501, body: "SceneServer.AssetMap: insertAsset FAILED - outside of kdTree boundary!" });
         }
     }
 };
 
 function insertAsset(node, asset, axis, recursionDepth) {
-
-    log("AssetServer.AssetMap: insertAsset - node.id:" + node.id + ", axis:" + axis + ", recursionDepth:" + recursionDepth);
-
     if (intersectsBoundary(asset.boundary, node.boundary) == INTERSECT_A_OUTSIDE_B) { // Asset outside root boundary
         return false;
     }
@@ -463,7 +485,7 @@ function insertAsset(node, asset, axis, recursionDepth) {
     recursionDepth++;
 
     if (recursionDepth >= MAX_DEPTH) { // Max hierarchy depth reached
-        log("AssetServer.AssetMap: insertAsset - at max depth - inserting into current node");
+        log("SceneServer.AssetMap: insertAsset - at max depth - inserting into current node");
         node.assets.push(asset);
         return true;
     }
@@ -476,12 +498,13 @@ function insertAsset(node, asset, axis, recursionDepth) {
         case INTERSECT_A_INSIDE_B: // Inside left boundary - insert into left child
             if (!node.leftChild) {
                 node.leftChild = {
-                    id:  "kdtree-" + uuid.uuidFast(),
+                    id: uuid.uuidFast(),
                     boundary: leftBoundary,
                     assets: []
                 };
+                kdNodes[node.leftChild.id] = node.leftChild;
             }
-            return insertAsset(node.leftChild, asset, axis, recursionDepth, cb);
+            return insertAsset(node.leftChild, asset, axis, recursionDepth);
 
         case INTERSECT_A_OVERLAP_B: // Overlaps left and right child boundaries - insert into this node
             node.assets.push(asset);
@@ -491,12 +514,13 @@ function insertAsset(node, asset, axis, recursionDepth) {
             var rightBoundary = halfBoundary(node.boundary, axis, 1);
             if (!node.rightChild) {
                 node.rightChild = {
-                    id:  "kdtree-" + uuid.uuidFast(),
+                    id: uuid.uuidFast(),
                     boundary: rightBoundary,
                     assets: []
                 };
+                kdNodes[node.rightChild.id] = node.rightChild;
             }
-            return insertAsset(node.rightChild, asset, axis, recursionDepth, cb);
+            return insertAsset(node.rightChild, asset, axis, recursionDepth);
     }
 }
 
@@ -536,7 +560,7 @@ function intersectsBoundary(a, b) {
         a.ymin > b.ymax ||
         a.zmax < b.zmin ||
         a.zmin > b.zmax) {
-       // log("intersectsBoundary INTERSECT_A_OUTSIDE_B : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
+        // log("intersectsBoundary INTERSECT_A_OUTSIDE_B : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
         return INTERSECT_A_OUTSIDE_B; // A entirely outside B
     }
     if (a.xmax <= b.xmax &&
@@ -545,7 +569,7 @@ function intersectsBoundary(a, b) {
         a.xmin >= b.xmin &&
         a.ymin >= b.ymin &&
         a.zmin >= b.zmin) {
-       // log("intersectsBoundary INTERSECT_A_INSIDE_B : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
+        // log("intersectsBoundary INTERSECT_A_INSIDE_B : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
         return INTERSECT_A_INSIDE_B;  // A entirely inside B
     }
     if (a.xmax >= b.xmax &&
@@ -554,10 +578,10 @@ function intersectsBoundary(a, b) {
         a.xmin <= b.xmin &&
         a.ymin <= b.ymin &&
         a.zmin <= b.zmin) {
-       // log("intersectsBoundary INTERSECT_B_INSIDE_A : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
+        // log("intersectsBoundary INTERSECT_B_INSIDE_A : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
         return INTERSECT_B_INSIDE_A;  // B entirely inside A
     }
-   // log("intersectsBoundary INTERSECT_A_OVERLAP_B : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
+    // log("intersectsBoundary INTERSECT_A_OVERLAP_B : a=" + JSON.stringify(a) + ", b=" + JSON.stringify(b))
     return INTERSECT_A_OVERLAP_B;     // A overlaps B
 }
 
@@ -570,14 +594,14 @@ function intersectsBoundary(a, b) {
  * - if node then has no assets, removes it else writes changes
  *--------------------------------------------------------------------------------------------------------------------*/
 exports.removeAsset = function(params, cb) {
-    log("AssetServer.AssetMap: removeAsset");
+    log("SceneServer.AssetMap: removeAsset");
     if (!params.assetId) {
         cb({ error: 501, body: "removeAsset.assetId expected" });
     } else if (!params.boundary) {
         cb({ error: 501, body: "removeAsset.boundary" });
     } else {
         var asset = { assetId: params.assetId, boundary: params.boundary };
-        if (removeAsset(kdtree, asset, 0, 0)) {
+        if (removeAsset(kdTree, asset, 0, 0)) {
             cb({ body: {} });
         } else {
             cb({ error: 501, body: "asset boundary too big" });
@@ -588,7 +612,7 @@ exports.removeAsset = function(params, cb) {
 function removeAsset(node, asset, axis, recursionDepth, cb) {
     axis = (axis + 1) % 3;
     if (intersectsBoundary(asset.boundary, node.boundary) != INTERSECT_A_INSIDE_B) { // Asset outside root boundary
-        cb("AssetServer.AssetMap: outside root node boundary");
+        cb({ error: 501, body: "SceneServer.AssetMap: outside root node boundary" });
         return;
     }
 
@@ -622,7 +646,7 @@ function removeAsset(node, asset, axis, recursionDepth, cb) {
         case INTERSECT_A_INSIDE_B: // Inside left boundary - insert into left child
             if (!node.leftChild) {
                 node.leftChild = {
-                    id:  "kdtree-" + uuid.uuidFast(),
+                    sid:  "l",
                     boundary: leftBoundary,
                     assets: []
                 };
@@ -639,7 +663,7 @@ function removeAsset(node, asset, axis, recursionDepth, cb) {
             var rightBoundary = halfBoundary(node.boundary, axis, 1);
             if (!node.rightChild) {
                 node.rightChild = {
-                    id:  "kdtree-" + uuid.uuidFast(),
+                    sid:  "r",
                     boundary: rightBoundary,
                     assets: []
                 };

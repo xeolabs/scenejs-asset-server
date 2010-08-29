@@ -26,7 +26,7 @@ var BoundaryBuilder = function() {
         var geo = new Array(positions.length / 3);
         var j = 0;
         for (var i = 0; i < positions.length; i += 3) {
-            geo[j++] = [positions[i], positions[i+1], positions[i+2]];
+            geo[j++] = [positions[i], positions[i + 1], positions[i + 2]];
         }
         geos[id] = geo;
     };
@@ -61,6 +61,21 @@ var BoundaryBuilder = function() {
         expandBoundary(extents, geo2 || geo);
     };
 
+    /** Register occurrence of geometry
+     */
+    this.geometry = function(positions) {
+        var geo = new Array(positions.length / 3);
+        var geo2;
+        var j = 0;
+        for (var i = 0; i < positions.length; i += 3) {
+            geo[j++] = [positions[i], positions[i + 1], positions[i + 2]];
+        }
+        for (var i = matStack.length - 1; i >= 0; i--) {
+            geo2 = transformPoints3(matStack[i], geo2 || geo);
+        }
+        expandBoundary(extents, geo2 || geo);
+    };
+
     /** Pop whatever is on the top of the transform matrix stack
      */
     this.popTransform = function() {
@@ -75,19 +90,21 @@ var BoundaryBuilder = function() {
 };
 
 function expandBoundary(e, positions) {
-    for (var i = 0; i < positions.length - 2; i += 3) {
+    for (var i = 0; (i + 2) < positions.length; i += 3) {
         var p = positions[i];
 
         var x = p[i];
         var y = p[i + 1];
         var z = p[i + 2];
 
-        if (x < e.xmin) e.xmin = x;
-        if (y < e.ymin) e.ymin = y;
-        if (z < e.zmin) e.zmin = z;
-        if (x > e.xmax) e.xmax = x;
-        if (y > e.ymax) e.ymax = y;
-        if (z > e.zmax) e.zmax = z;
+        if (x != null && y != null && z != null) {
+            if (x < e.xmin) e.xmin = x;
+            if (y < e.ymin) e.ymin = y;
+            if (z < e.zmin) e.zmin = z;
+            if (x > e.xmax) e.xmax = x;
+            if (y > e.ymax) e.ymax = y;
+            if (z > e.zmax) e.zmax = z;
+        }
     }
 }
 

@@ -43,7 +43,10 @@ var fs = require("fs")
 
 function rm(p, cb_) {
 
-    if (!p) return cb(new Error("Trying to rm nothing?"))
+    if (!p) {
+        cb("Trying to rm nothing?")
+        return;
+    }
 
     var cb = function (er) {
         if (er) {
@@ -55,19 +58,27 @@ function rm(p, cb_) {
     };
 
     fs.lstat(p, function (er, s) {
-        if (er) return cb();
+        if (er) {
+            cb();
+            return;
+        }
         if (s.isFile() || s.isSymbolicLink()) {
             fs.unlink(p, cb);
         } else {
             fs.readdir(p, function (er, files) {
-                if (er) return cb(er)
-                        ;
+                if (er) {
+                    cb(er);
+                    return;
+                }
                 (function rmFile(f) {
                     if (!f) fs.rmdir(p, cb);
                     else rm(path.join(p, f), function (_, er) {
-                        if (er) return cb(er);
+                        if (er) {
+                            cb(er);
+                            return;
+                        }
                         rmFile(files.pop());
-                    })
+                    });
                 })(files.pop());
             });
         }

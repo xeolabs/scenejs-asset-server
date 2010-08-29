@@ -25,13 +25,14 @@
 </table>
 
 <script type="text/javascript">
+
     SceneJS.requireModule("modules/kdclient.js?d=dff");
+    SceneJS.requireModule("http://localhost:8888/?cmd=getAsset&id=org.scenejs.examples.collada.seymourplane&pkg=module");
 
     var exampleScene = SceneJS.scene({
         canvasId: "theCanvas",              // Bind to WebGL canvas
         loggingElementId: "theLoggingDiv"   // Bind to logging DIV
     },
-
 
         /* View transform - takes viewing parameters through the data passed
          * into this scene as it is rendered. Those parameters are generated
@@ -75,9 +76,18 @@
                                     SceneJS.useModule({
                                         name: "org.scenejs.kdclient",
                                         params : {
-                                            serverURI : "ws://127.0.0.1:8888/"
+                                            host: "127.0.0.1",
+                                            port: 8888
                                         }
                                     }))
+
+//                             SceneJS.useModule({
+//                                        name: "org.scenejs.examples.collada.seymourplane"
+////                                 ,
+////                                        params : {
+////                                            symbolURI: "VisualSceneNode"
+////                                        }
+//                                    }))
                             )
                     )
             );

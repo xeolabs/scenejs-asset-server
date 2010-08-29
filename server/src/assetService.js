@@ -52,6 +52,7 @@ exports.defaultSettings = {
     host : "localhost",
     port : 8888,
     attachmentsDir : process.cwd() + "/.attachments",
+    attachmentsBaseURL: "/",
     db : {
         host: "localhost",
         port: 5984,
@@ -77,10 +78,10 @@ exports.start = function(customSettings, cb) {
     settings.__proto__ = exports.defaultSettings;
 
     assetMap.start(settings, function() {
-        assetStore.start(settings);
+        assetStore.start(settings, function () {
+            createDummyContent();
+        });
     });
-
-    createDummyContent();
 
     server = ws.createServer({
         debug: false
@@ -149,7 +150,7 @@ exports.start = function(customSettings, cb) {
                                 resultStr = JSON.stringify(result);
 
                             } else {
-                                log("AssetServer READY");
+                                log("SceneServer READY");
                                 switch (result.format) {
 
                                     /* Naked unbodied response from asset store,
@@ -169,6 +170,8 @@ exports.start = function(customSettings, cb) {
                                 //  log("responding with " + resultStr);
                             }
 
+                            log("%%%%%%%%%%%%%%%%% " + JSON.stringify(params));
+                            log(wrapInCallback(params.callback, resultStr));
                             if (params.callback) {
                                 res.end(wrapInCallback(params.callback, resultStr));
                             } else {
@@ -204,6 +207,10 @@ function service(params, cb) {
     } else {
 
         switch (params.cmd) {
+
+            case "getStatus":
+                //assetStore.getAssetTags(params, cb);
+                break;
 
             case "createAsset":
 
@@ -267,6 +274,10 @@ function service(params, cb) {
                 assetStore.getAssets(params, cb);
                 break;
 
+            case "getAssetsInBoundary":
+                assetMap.getAssetsInBoundary(params, cb);
+                break;
+
             // Authentication needed here
             //
             //            case "deleteAsset":
@@ -277,8 +288,12 @@ function service(params, cb) {
                 assetMap.getAssetMap(params, cb);
                 break;
 
-            case "getAssetMapBoundingBoxes" :
-                assetMap.getAssetMapBoundingBoxes(params, cb);
+            case "getKDGraph" :
+                assetMap.getKDGraph(params, cb);
+                break;
+
+            case "getAssetMapUpdates" :
+                assetMap.getAssetMapUpdates(params, cb);
                 break;
 
             default:
@@ -328,31 +343,50 @@ function createDummyContent() {
             source: {
                 url: "http://www.scenejs.org/library/v0.7/assets/examples/seymourplane_triangulate/seymourplane_triangulate_augmented.dae"
             }
-        }}, function (result) {
-
+        }
+    }, function (result) {
+        log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+        log(JSON.stringify(result))
     });
     //
 
-    service({
-        cmd:"createAsset",
-        meta : {
-            name :"org.scenejs.examples.collada.house",
-            description: "House model from VAST Architecture",
-            tags : ["collada", "example", "gizangos"]
-        },
-        assembly : {
-            type : "dae",
-            source: {
-                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
-            },
-            transforms : {
-                center: true,
-                position: { x: 1000.0 }
-            }
-        }
-    }, function(result) {
+    //    service({
+    //        cmd: "createAsset",
+    //        meta : {
+    //            name :"com.biodigital.collada.skeleton-torso",
+    //            description: "BioDigital test Anatomy",
+    //            tags : ["collada", "anatomy", "biodigital", "skeleton"]
+    //        },
+    //        assembly : {
+    //            type : "dae",
+    //            source: {
+    //                url: "file:///home/lindsay/Downloads/SkelExport_torso/SkelExport_torso.dae"
+    //            }
+    //        }
+    //    }, function (result) {
+    //        log(JSON.stringify(result))
+    //    });
 
-    });
+    //    service({
+    //        cmd:"createAsset",
+    //        meta : {
+    //            name :"org.scenejs.examples.collada.house",
+    //            description: "House model from VAST Architecture",
+    //            tags : ["collada", "example", "gizangos"]
+    //        },
+    //        assembly : {
+    //            type : "dae",
+    //            source: {
+    //                url: "http://scenejs.org/library/v0.7/assets/examples/courtyard-house/models/model.dae"
+    //            },
+    //            transforms : {
+    //                center: true,
+    //                position: { x: 1000.0 }
+    //            }
+    //        }
+    //    }, function(result) {
+    //
+    //    });
     //
     //    service({
     //        cmd:"createAsset",
@@ -366,7 +400,7 @@ function createDummyContent() {
     //            source: {
     //                url: "http://scenejs.org/library/v0.7/assets/examples/spiral-staircase/spiral-stairs-subgraph.js"
     //            },
-    //            images: []
+    //            attachments: []
     //        }}, function(result) {
     //
     //    });

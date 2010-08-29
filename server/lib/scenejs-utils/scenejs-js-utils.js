@@ -1,3 +1,5 @@
+var sys = require("sys");
+
 /** Wrap the given subgraph JSON as a SceneJS Module
  *
  * @param name Name for the module - mandatory

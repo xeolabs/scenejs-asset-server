@@ -1,4 +1,3 @@
-var sys = require("sys");
 var registry = require('./builder-registry');
 var loaderLib = require('../../../lib/loader');
 var log = require('../../../lib/log').log;

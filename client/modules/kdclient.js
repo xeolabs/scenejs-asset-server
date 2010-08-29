@@ -29,19 +29,22 @@
     const LOADED = 2;
     const RENDERING = 2;
 
-    SceneJS.kdAsset = function(uri) {
+    SceneJS.kdAsset = function(requestURL, sid) {
 
         var status = INITIAL;
         var asset;
 
         return SceneJS.node({
+
+            sid: sid, // Allows location for removal
+
             listeners: {
                 "rendering" : function() {
                     if (status != RENDERING) {
                         var self = this;
                         switch (status) {
                             case INITIAL:
-                                jsonp(uri,
+                                jsonp(requestURL,
                                         function(json) {    // onLoad
                                             if (!data) {
                                                 throw "asset server kd-tree asset response is null";
@@ -49,7 +52,7 @@
                                                 throw "asset server responded with error: " + data.error;
                                             } else {
                                                 alert(json);
-                                                asset = eval("(" + json + ")");
+                                                asset = eval("(" + json + ")");   // TODO: eval in a web worker
                                                 status = LOADED;
                                             }
                                         });
@@ -86,21 +89,18 @@
         /** Node factory function - returns the subgraph that
          * will contain the kd-tree content
          *
-         * @param {String} params.serverURI WS URL of Asset Server
-         * @param {Object} params.boundary Optional 3D boundary to select a portion fo the kd-tree to pull in
+         * @param {String} params.host Host name of asset server - default is "127.0.0.1"
+         * @param {String} params.port Port through which to open WebSocket - default is 8888
+         * @param {Object} params.boundary Optional 3D boundary to select a portion fo the kd-tree to pull in - default is none
          */
         getNode : function(params) {
-            alert("getNode");
-            if (!params.serverURI) {
-                throw "kdclient needs a serverURI";
-            }
+
+            var assetServerURI = "ws://" + (params.host || "127.0.0.1") + ":" + (params.port || "8888");
 
             if (params.boundary) {
 
                 /* Will get BoundingBoxes for a bounded section of the kd-tree
                  */
-
-
                 var b = params.boundary;
                 if (!b.xmin || !b.ymin || !b.xmin || !b.xmax || !b.ymax || !b.zmax) {
                     throw "kdclient boundary is incomplete";
@@ -112,15 +112,13 @@
 
             return SceneJS.socket({
 
-                /* URL of Asset Server WebSocket
-                 */
-                uri: params.serverURI,
+                uri: assetServerURI,
 
                 /* Bootstrap message to send on opening connection - requests BoundingBoxes
                  */
                 messages: [
                     {
-                        cmd: "getAssetMapBoundingBoxes",
+                        cmd: "getKDGraph",
                         boundary: params.boundary        // Can be undefined
                     }
                 ],

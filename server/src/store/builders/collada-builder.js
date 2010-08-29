@@ -2,8 +2,10 @@ var sys = require("sys");
 var registry = require('./builder-registry');
 var loaderLib = require('../../../lib/loader');
 var xmlLib = require('../../../lib/scenejs-utils/dep/glge_xmlparser');
-var jsonLib = require('../../../lib/scenejs-utils/scenejs-json-builder');
-var colladaLib = require('../../../lib/scenejs-utils/scenejs-collada-parser');
+var boundarybuilder = require("../../../lib/scenejs-utils/boundary-builder");
+//var colladaLib = require('../../../lib/scenejs-utils/scenejs-collada-parser');
+//var colladaLib = require('../../../lib/scenejs-utils/scenejs-collada-parser2');
+var colladaLib = require('../../../lib/scenejs-utils/scenejs-collada-parser-unrolled');
 
 exports.init = function() {
 
@@ -16,30 +18,34 @@ exports.init = function() {
         /**
          * Build asset from COLLADA file at URL
          */
-        build : function(assetParams, cb) {
-            if (!assetParams.source) {
+        build : function(
+                params, // Request params
+                storage, // Server-provided - attachments dir etc.
+                cb) {
+
+            if (!params.assembly.source.url) {
                 cb({
                     error: 501,
-                    body: "parameter expected: 'source'"
+                    body: "parameter expected: 'assembly.source.url'"
                 });
                 return;
             }
 
-            if (!assetParams.source.url) {
+            if (!params.meta.name) {
                 cb({
                     error: 501,
-                    body: "parameter expected: 'source.url'"
+                    body: "parameter expected: 'meta.name'"
                 });
                 return;
             }
 
             sys.puts("Builder 'dae' building asset");
-            sys.puts("Loading COLLADA from '" + assetParams.source.url + "'");
+            sys.puts("Loading COLLADA from '" + params.assembly.source.url + "'");
 
             /* Load source COLLADA file
              */
             loaderLib.load({
-                url: assetParams.source.url
+                url: params.assembly.source.url
             },
                     function(result) {
                         if (result.error) { // Failed
@@ -59,21 +65,16 @@ exports.init = function() {
 
                                         } else {
 
-                                            /* Parse DOM into SceneJS JSON
-                                             */
-                                            var jsonBuilder = jsonLib.newBuilder({
-                                                numIndents: 4, // TODO: put in asset assembly params
-                                                module : assetParams.moduleName,
-                                                api : "function" // or "object"
-                                            });
+                                            var boundaryBuilder = boundarybuilder.getBoundaryBuilder();
 
-                                            var colladaParser = colladaLib.newParser(jsonBuilder);
+                                            // var colladaParser = colladaLib.newParser(jsonBuilder, boundaryBuilder);
+                                            var colladaParser = colladaLib.newParser(boundaryBuilder);
                                             colladaParser.parse({
-                                                sourceURL: assetParams.source.url,
+                                                sourceURL: params.assembly.source.url,
+                                                baseID: params.meta.name,
                                                 options:{
                                                     comments: false, // TODO: put in asset assembly params
-                                                    boundingBoxes : false,
-                                                    info: false
+                                                    boundingBoxes : false
                                                 }
                                             },
                                                     result.body,
@@ -94,7 +95,7 @@ exports.init = function() {
                                                                     spatial : result.body.spatial,
                                                                     stats: result.body.stats,
                                                                     attachments : getAttachmentURLs(
-                                                                            assetParams.source.url,
+                                                                            params.assembly.source.url,
                                                                             result.body.manifest.attachments)
                                                                 }
                                                             });

@@ -80,6 +80,8 @@ exports.newBuilder = function(cfg) {
     return new Builder(cfg);
 };
 
+var sys = require("sys");
+
 var Builder = function(cfg) {
     cfg = cfg || {};
     this._numIndentChars = cfg.numIndents || 4;
@@ -136,6 +138,7 @@ var Builder = function(cfg) {
             }
         }
         this._indent();
+        cfg = cfg || {};
         if (cfg.comment) {
             this._comment(cfg.comment);
         }
@@ -194,6 +197,7 @@ var Builder = function(cfg) {
             this._writeln(cfg.toString());
         } else {
             for (var key in cfg) {
+
                 if (cfg.hasOwnProperty(key)) {
                     var value = cfg[key];
                     if (value != undefined) {
@@ -214,7 +218,7 @@ var Builder = function(cfg) {
     this._hasConfigs = function(cfg) {
         for (var key in cfg) {
             if (cfg.hasOwnProperty(key)) {
-                if (cfg[key]) {
+                if (cfg[key] != undefined) {
                     return true;
                 }
             }
