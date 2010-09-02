@@ -70,12 +70,12 @@ const DB_NAME = "scenejs-asset-map";
 
 exports.start = function(_settings, cb) {
     settings = _settings;
-
+           
     /* Connect to DB
      */
     log("SceneServer.AssetMap: connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
     try {
-        client = couchdb.createClient(settings.db.port, settings.db.host);
+        client = couchdb.createClient(settings.db.port, settings.db.host, settings.db.user, settings.db.password);
         db = client.db(DB_NAME);
     } catch (e) {
         throw "SceneServer.AssetMap: FAILED to connect to CouchDB: " + e;

@@ -48,7 +48,7 @@ var settings;
 var server;
 
 
-exports.defaultSettings = {
+var defaultSettings = {
     host : "localhost",
     port : 8888,
     attachmentsDir : process.cwd() + "/.attachments",
@@ -59,6 +59,8 @@ exports.defaultSettings = {
         dbname: "scenejs-assets"
     }
 };
+
+exports.defaultSettings = defaultSettings;
 
 function createMessage(msg) {
     return "{ body: " + msg + "}";
@@ -74,14 +76,15 @@ function createErrorMessage(code, msg) {
  * @param cb Success callback
  */
 exports.start = function(customSettings, cb) {
-    settings = customSettings || {};
-    settings.__proto__ = exports.defaultSettings;
+    settings = customSettings || defaultSettings;
 
-    assetMap.start(settings, function() {
-        assetStore.start(settings, function () {
-            createDummyContent();
-        });
-    });
+    
+    assetMap.start(settings,
+            function() {
+                assetStore.start(settings, function () {
+                    createDummyContent();
+                });
+            });
 
     server = ws.createServer({
         debug: false
@@ -168,10 +171,7 @@ exports.start = function(customSettings, cb) {
                                 }
 
                                 //  log("responding with " + resultStr);
-                            }
-
-                            log("%%%%%%%%%%%%%%%%% " + JSON.stringify(params));
-                            log(wrapInCallback(params.callback, resultStr));
+                            }                                                      
                             if (params.callback) {
                                 res.end(wrapInCallback(params.callback, resultStr));
                             } else {
@@ -345,8 +345,8 @@ function createDummyContent() {
             }
         }
     }, function (result) {
-        log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-        log(JSON.stringify(result))
+        //        log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+        //        log(JSON.stringify(result))
     });
     //
 

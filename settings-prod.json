@@ -1,9 +1,12 @@
 {
-    host : "localhost",
-    port : 8080,
-    attachmentsDir : "/var/www/assetserver/attachments",
-    db : {
-        host: "localhost",
-        port: 5984
+    "host" : "184.106.205.99",
+    "port" : 8888,
+    "attachmentsDir" : "./.attachments",
+    "attachmentsBaseURL" : "184.106.205.99/assetserver/attachments/",
+    "db" : {
+        "host": "184.106.205.99",
+        "port": 5984,
+        "user" : "test",
+        "password": "test"
     }
 }

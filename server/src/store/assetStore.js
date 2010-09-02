@@ -69,7 +69,7 @@ exports.start = function(_settings, cb) {
      */
     log("SceneServer.AssetStore: connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
     try {
-        client = couchdb.createClient(settings.db.port, settings.db.host);
+        client = couchdb.createClient(settings.db.port, settings.db.host, settings.db.user, settings.db.password);
         db = client.db(DB_NAME);
     } catch (e) {
         throw "SceneServer.AssetStore failed to connect to CouchDB: " + e;
@@ -91,7 +91,14 @@ exports.start = function(_settings, cb) {
                                 log("SceneServer.AssetStore: creating DB '" + DB_NAME + "'");
                                 if (error) {
                                     log("SceneServer.AssetStore: failed to create CouchDB database: " + JSON.stringify(error));
-                                    throw "AssetStore failed to create CouchDB database";
+                                    throw "SceneServer.AssetStore failed to create CouchDB database";
+                                } else {
+                                    createViews(function(error) {
+                                        if (error) {
+                                            log("SceneServer.AssetStore: failed to create CouchDB views: " + JSON.stringify(error));
+                                            throw "SceneServer.AssetStore failed to create CouchDB views";
+                                        }
+                                    });
                                 }
                                 if (cb) {
                                     cb();
@@ -112,6 +119,22 @@ function ensureDirExists(dir) {
             });
         }
     });
+}
+
+function createViews(cb) {
+    db.saveDoc("_design/asset-meta", {
+        "language": "javascript",
+        "views": {
+
+            "all_tags": {
+                "map": "function(doc) { if (doc.type == 'asset-handle' && doc.tags) {  doc.tags.forEach(function(tag) { emit(tag, doc.name);  }); } }"
+            },
+
+            "all_assets": {
+                "map": "function(doc) { if (doc.type == 'asset-handle')  emit(doc._id, doc.name) }"
+            }
+        }
+    }, cb);
 }
 
 /*---------------------------------------------------------------------------------------------------------------------
@@ -151,8 +174,9 @@ exports.createAsset = function(params, cb) {
 
             var dirName = uuid.uuidFast() + "/";
             var storage = {
+                dirName: dirName,
                 attachmentsDir: settings.attachmentsDir + dirName,
-                attachmentsBaseURL : settings.attachmentsPath + dirName
+                attachmentsBaseURL : settings.attachmentsBaseURL + dirName
             };
 
             log("SceneServer.AssetStore: createAsset attachmentsDir     = " + storage.attachmentsDir);
@@ -160,7 +184,6 @@ exports.createAsset = function(params, cb) {
 
             builder.build(
                     params,
-                    storage,
 
                     function(builderProduct) {
                         if (builderProduct.error) {
@@ -354,7 +377,11 @@ function saveAttachments(params, storage, builtProduct, cb) {
                     try {
                         fetchAttachments(storage.attachmentsDir, attachments, 0, savedAttachments,
                                 function() {
-                                    cb(null, { attachmentsDir: storage.attachmentsDir, savedAttachments: savedAttachments.imageList });
+                                    cb(null, {
+                                        dirName: storage.dirName,
+                                        attachmentsDir: storage.attachmentsDir,
+                                        savedAttachments: savedAttachments.imageList
+                                    });
                                 });
                     } catch (e) {
                         rmdirrf.rm(storage.attachmentsDir,
@@ -818,7 +845,7 @@ exports.getAsset = function(params, cb) {
                                                         body:  JSON.stringify(
                                                                 fixAssetImageURLs(
                                                                         assetBody.rootNode,
-                                                                        assetMeta.attachments.attachmentsDir))
+                                                                        settings.attachmentsBaseURL + "/" + assetMeta.attachments.dirName))
                                                     });
                                                 }
                                             });

@@ -33,17 +33,25 @@ var fs = require('fs');
 var assetService = require('./server/src/assetService');
 var sys = require('sys');
 
-fs.readFile(process.argv[2] || './settings.json', function(err, data) {
-    var settings = {};
-    if (err) {
-        sys.puts('No settings.json found (' + err + '). Using default settings');
-    } else {
-        try {
-            settings = JSON.parse(data.toString('utf8', 0, data.length));
-        } catch (e) {
-            sys.puts('Error parsing settings.json: ' + e);
-            process.exit(1);
-        }
-    }
-    assetService.start(settings);
-});
+var settingsFile = process.argv[2];
+if (settingsFile) {
+    sys.puts("Settings: " + settingsFile);
+    
+}
+
+fs.readFile(settingsFile || './settings.json',
+        function(err, data) {
+            var settings; // AssetService to fall back on defaults 
+            if (err) {
+                sys.puts('No settings.json found (' + err + '). Using default settings');
+            } else {
+                try {
+                    sys.puts(data.toString('utf8', 0, data.length));
+                    settings = JSON.parse(data.toString('utf8', 0, data.length));;
+                } catch (e) {
+                    sys.puts('Error parsing settings.json: ' + e);
+                    process.exit(1);
+                }
+            }
+            assetService.start(settings);
+        });

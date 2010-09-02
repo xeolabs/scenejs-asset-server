@@ -20,7 +20,6 @@ exports.init = function() {
          */
         build : function(
                 params, // Request params
-                storage, // Server-provided - attachments dir etc.
                 cb) {
 
             if (!params.assembly.source.url) {

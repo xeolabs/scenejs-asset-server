@@ -1,13 +1,10 @@
 {
-    host : "localhost",
-    port : 8080,
-    attachmentsDir : "./.assetserver/attachments",
-
-    /* Dir path to attachments
-     */
-    attachmentsPath : "",
-    db : {
-        host: "localhost",
-        port: 5984
+    "host" : "localhost",
+    "port" : 8080,
+    "attachmentsDir" : "./.assetserver/attachments",
+    "attachmentsPath" : "",
+    "db" : {
+        "host": "localhost",
+        "port": 5984
     }
 }
