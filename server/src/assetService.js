@@ -78,7 +78,7 @@ function createErrorMessage(code, msg) {
 exports.start = function(customSettings, cb) {
     settings = customSettings || defaultSettings;
 
-    
+
     assetMap.start(settings,
             function() {
                 assetStore.start(settings, function () {
@@ -117,7 +117,7 @@ exports.start = function(customSettings, cb) {
                                                 function (result) {
                                                     if (result.error) {
                                                         server.send(conn._id, createErrorMessage(501, result.error));
-                                                    } else {
+                                                    } else {       
                                                         server.send(conn._id, createMessage(result.body));
                                                     }
                                                 });
@@ -171,7 +171,7 @@ exports.start = function(customSettings, cb) {
                                 }
 
                                 //  log("responding with " + resultStr);
-                            }                                                      
+                            }
                             if (params.callback) {
                                 res.end(wrapInCallback(params.callback, resultStr));
                             } else {
@@ -209,7 +209,7 @@ function service(params, cb) {
         switch (params.cmd) {
 
             case "getStatus":
-                //assetStore.getAssetTags(params, cb);
+                cb({ body: "Ready" });
                 break;
 
             case "createAsset":
@@ -292,8 +292,9 @@ function service(params, cb) {
                 assetMap.getKDGraph(params, cb);
                 break;
 
-            case "getAssetMapUpdates" :
-                assetMap.getAssetMapUpdates(params, cb);
+            case "clientMessages" :
+                    log("client messages");
+                assetMap.clientMessages(params, cb);
                 break;
 
             default:
@@ -348,24 +349,6 @@ function createDummyContent() {
         //        log("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
         //        log(JSON.stringify(result))
     });
-    //
-
-    //    service({
-    //        cmd: "createAsset",
-    //        meta : {
-    //            name :"com.biodigital.collada.skeleton-torso",
-    //            description: "BioDigital test Anatomy",
-    //            tags : ["collada", "anatomy", "biodigital", "skeleton"]
-    //        },
-    //        assembly : {
-    //            type : "dae",
-    //            source: {
-    //                url: "file:///home/lindsay/Downloads/SkelExport_torso/SkelExport_torso.dae"
-    //            }
-    //        }
-    //    }, function (result) {
-    //        log(JSON.stringify(result))
-    //    });
 
     //    service({
     //        cmd:"createAsset",

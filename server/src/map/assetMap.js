@@ -70,7 +70,7 @@ const DB_NAME = "scenejs-asset-map";
 
 exports.start = function(_settings, cb) {
     settings = _settings;
-           
+
     /* Connect to DB
      */
     log("SceneServer.AssetMap: connecting to CouchDB at " + settings.db.host + ":" + settings.db.port);
@@ -257,7 +257,6 @@ exports.getAssetMap = function(params, cb) {
     cb({ body: kdTree });
 };
 
-
 /*----------------------------------------------------------------------------------------------------------------------
  * Returns JSON (sub)graph of SceneJS.KDNodes, either for entire kd-tree of a portion of it
  *
@@ -291,7 +290,7 @@ exports.getKDGraph = function(params, cb) {
         root = findIsectNode(null, kdTree, boundary);
 
     } else if (params.kdNodeID) {
-        log("SceneServer.AssetMap: getKDGraph kdNodeID=" + kdNodeID);
+        log("SceneServer.AssetMap: getKDGraph kdNodeID=" + params.kdNodeID);
 
         root = kdNodes[params.kdNodeID];
 
@@ -381,73 +380,86 @@ function buildKDGraph(node) {
     return sceneNode;
 }
 
-/*----------------------------------------------------------------------------------------------------------------------
- * Services a request that notifies the server of batches of BoundingBox intersection state changes and gets
- * any assets the server then provides for kd-nodes that have either become visible or are likely to become visible
- *
- *--------------------------------------------------------------------------------------------------------------------*/
-exports.getAssetMapUpdates = function(params, cb) {
-    if (!params.events) {
-        cb({ error: 500, body: "getAssetMapUpdates.events missing" });
+exports.clientMessages = function(params, cb) {
+    if (!params.messages) {
+        cb({ error: 500, body: "clientMessages.messages missing" });
         return;
     }
     const SERVER_URL = "http://" + settings.host + ":" + settings.port;
 
-    log("SceneServer.AssetMap: getAssetMapUpdates");
+    log("SceneServer.AssetMap: clientMessages " + params.messages.length);
 
     var messages = [];
 
-    /* Process each event
+    /* Process each message
      */
-    var len = params.events.length;
-    var event;
+    var len = params.messages.length;
+    var message;
     for (var i = 0; i < len; i++) {
-        event = params.events[i];
-
-        switch (event.name) {
-
-            case "gone":
-                break;
-
-            case "distant":
-                break;
-
-            case "near":
-            case "visible":
-
-                var node = kdNodes[event.params.nodeID];
-                if (!node) {
-                    log("kd-node not found: '" + event.params.nodeID + "'");
-                } else {
-                    var sceneNodes = [];
-                    for (var j = node.assets.length - 1; j >= 0; j--) {
-                        sceneNodes.push({
-                            type: "asset",
-                            cfg: {
-                                uri: SERVER_URL + "?cmd=getAsset&pkg=node&id=" + node.assets[j].assetId
+        message = params.messages[i];
+        if (!message.cmd) {
+            cb({ error: 500, body: "clientMessages - message cmd missing" });
+            return;
+        }
+        message.params = message.params || {};
+        switch (message.cmd) {
+            case "getAssetMap" :
+                getMap(params,
+                        function(result) {
+                            if (result.error) {
+                                cb(result);
+                                return;
                             }
+                            messages.push({
+                                cmd: "assetMap",
+                                params: {
+                                    nodeID: message.params.nodeID,
+                                    map: result.body
+                                }
+                            });
                         });
-                    }
-                    messages.push({
-                        name: "cfg-node",
-                        params: {
-                            nodeID: event.params.nodeID,
-                            config: {
-                                "+nodes": sceneNodes
-                            }
-                        }
-                    });
-                }
-
                 break;
+
+            default:
+                cb({
+                    error: 500,
+                    body: "clientMessages - unsupported message: " + message.cmd
+                });
+                return;
         }
     }
     var json = JSON.stringify(messages);
     cb({
-        // format : "json",
+        format : "json",
         body: json
     });
 };
+
+function getMap(params, cb) {
+    log("^^^^^^^^^^^^^^^^^ getMap");
+    var root;
+    if (params.boundary) { // Get subgraph of KDNodes for a bounded section of the kd-tree
+        var boundary = params.boundary;
+        if (!boundary.xmin || !boundary.ymin || !boundary.xmin || !boundary.xmax || !boundary.ymax || !boundary.zmax) {
+            cb({ error: 500, body: "getKDGraph.boundary is incomplete" });
+            return;
+        }
+        if (boundary.xmin > boundary.xmax || boundary.ymin > boundary.ymax || boundary.zmin > boundary.zmax) {
+            cb({ error: 500, body: "getKDGraph.boundary is inside-out" });
+            return;
+        }
+        root = findIsectNode(null, kdTree, boundary);
+
+    } else if (params.kdNodeID) {
+        root = kdNodes[params.kdNodeID];
+    } else {
+        root = kdTree;
+    }
+    cb({
+        body: root
+    });
+}
+;
 
 /*---------------------------------------------------------------------------------------------------------------------
  * Inserts an asset into the Asset Map

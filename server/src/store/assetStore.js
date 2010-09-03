@@ -456,6 +456,7 @@ function createAssetMeta(params, storage, builtProduct, assetBody, assetAssembly
         type : "asset-meta",
         description : params.meta.description || asset.name || "n/a",
         contributor : params.meta.contributor || asset.contributor || "n/a",
+        params : params.meta.params || {},
         manifest : builtProduct.body.manifest || {},
         spatial : builtProduct.body.spatial || {},
         stats : builtProduct.body.stats || {},
@@ -838,14 +839,10 @@ exports.getAsset = function(params, cb) {
                                             function(error, assetBody) {
                                                 if (error) {
                                                     cb({ error: 500, body: JSON.stringify(error) });
-
                                                 } else {
                                                     cb({
                                                         format : "script",
-                                                        body:  JSON.stringify(
-                                                                fixAssetImageURLs(
-                                                                        assetBody.rootNode,
-                                                                        settings.attachmentsBaseURL + "/" + assetMeta.attachments.dirName))
+                                                        body:  JSON.stringify(postProcess(assetMeta, assetBody))
                                                     });
                                                 }
                                             });
@@ -855,6 +852,21 @@ exports.getAsset = function(params, cb) {
             });
 };
 
+function postProcess(assetMeta, assetBody, params) {
+    var node = assetBody.rootNode;
+    if (assetBody.constructor) {
+        var context = {};
+        node = assetBody.constructor({
+            context: context,
+            params: params,
+            node: node
+        });
+    }
+    if (assetMeta.attachments.dirName) {
+        fixAssetImageURLs(node, settings.attachmentsBaseURL + "/" + assetMeta.attachments.dirName);
+    }
+    return node;
+}
 
 function fixAssetImageURLs(node, urlBase) {
     if (node) {
@@ -878,5 +890,4 @@ function fixAssetImageURLs(node, urlBase) {
             }
         }
     }
-    return node;
 }

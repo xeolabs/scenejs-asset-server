@@ -1,0 +1,68 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title></title>
+    <script type="text/javascript" src="../../lib/scenejs.js"></script>
+    <link href="../../css/style.css" rel="stylesheet" type="text/css"/>
+
+</head>
+<body>
+<div id="container">
+    <div id="header">
+        <div id="header-nav">
+
+        </div>
+        <div id="header-inner">
+            <h1><a href="http://scenejs.org">SceneJS</a>&nbsp;&gt;&nbsp;<a href="../../index.html">Asset Server</a>&nbsp;&gt;&nbsp;getAsset Demo
+            </h1>
+            <a class="a2a_dd" href="http://www.addtoany.com/share_save?linkname=s&amp;linkurl=s"><img
+                    src="http://static.addtoany.com/buttons/share_save_171_16.png" width="171" height="16" border="0"
+                    alt="Share/Bookmark"/></a>
+            <script type="text/javascript">
+                var a2a_linkname = "SceneJS Asset Server Test #1";
+                var a2a_linkurl = window.location;
+                var a2a_onclick = 1;</script>
+            <script type="text/javascript" src="http://static.addtoany.com/menu/page.js"></script>
+        </div>
+    </div>
+    <div id="content">
+        <canvas id="theCanvas" width="1030" height="700">
+            <p>This example requires a browser that supports the
+                <a href="http://www.w3.org/html/wg/html5/">HTML5</a>
+                &lt;canvas&gt; feature.</p>
+        </canvas>
+        <div id="info">
+            <h2>Testing the API "getAsset" command</h2>
+
+            <p>This might take a few seconds to load.</p>
+
+            <p>The Asset Server supports the download of assets as JSON subgraphs. When the SceneJS.createNode function
+                is given as the optional JSONP callback parameter, the asset node is immediately created in the browser
+                from the response. Go one step further and specify "var myNode=SceneJS.createNode" as the callback, and
+                you'll get your asset as a SceneJS node object called "myNode". </p>
+            <br/>
+            <ul>
+                <li><a target="_other" href="scene-def.js">Client scene graph source code</a></li>
+                <li><a target="_other" href="http://scenejs.wikispaces.com/Asset+Server">Asset Server API Docs</a></li>
+            </ul>
+        </div>
+        <div id="log">
+            <h3>Log</h3>
+
+            <div id="theLoggingDiv"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Get asset -->
+
+<script
+        src="http://assets.scenejs.org/api/v1/?cmd=getAsset&id=org.scenejs.examples.collada.seymourplane&callback=var%20seymourPlane=SceneJS.createNode"
+        type="text/javascript"></script>
+
+<!-- Create scene graph -->
+
+<script type="text/javascript" src="scene-def.js"></script>
+</body>
+</html>

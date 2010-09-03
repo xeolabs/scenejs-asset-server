@@ -1,0 +1,134 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title></title>
+    <link href="css/style.css" rel="stylesheet" type="text/css"/>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"/>
+</head>
+<body>
+<div id="container">
+    <div id="header">
+        <div id="header-nav">
+
+        </div>
+        <div id="header-inner">
+            <h1><a href="http://scenejs.org">SceneJS</a> &gt;&nbsp;Asset Server
+            </h1>
+            <a class="a2a_dd" href="http://www.addtoany.com/share_save?linkname=s&amp;linkurl=s"><img
+                    src="http://static.addtoany.com/buttons/share_save_171_16.png" width="171" height="16" border="0"
+                    alt="Share/Bookmark"/></a>
+            <script type="text/javascript">
+                var a2a_linkname = "SceneJS Asset Server";
+                var a2a_linkurl = window.location;
+                var a2a_onclick = 1;</script>
+            <script type="text/javascript" src="http://static.addtoany.com/menu/page.js"></script>
+        </div>
+    </div>
+    <div id="content">
+        <div id="examples-table">
+            <div id="col1">
+                <h2>An experimental JSON content server for SceneJS</h2>
+                <ul>
+                    <li>Warehouses Collada models as SceneJS JSON</li>
+                    <li>Provides assets for download via HTTP and WebSocket</li>
+                    <li>Provides metadata to assist with asset integration into scene graphs</li>
+                    <li>Spatially indexes assets in a kd-tree to support fast queries for assets that intersect given
+                        boundaries
+                    </li>
+                </ul>
+
+                <h3>Resources:</h3>
+                <ul>
+                    <li><span><a target="_other"
+                                 href="http://scenejs.wikispaces.com/Asset+Server">Documentation</a></span></li>
+
+                    <li><span><a target="_other" href="http://github.com/xeolabs/scenejs-asset-server">Source
+                        code</a></span>
+                    </li>
+                    <li><span><a target="_other"
+                                 href="https://xeolabs.lighthouseapp.com/projects/57833-scenejs-asset-server/overview">Issue
+                        Tracker</a></span></li>
+
+                    <li><span><a target="_other" href="http://www.retaggr.com/page/LindsayStanleyKay">Contact</a></span>
+                    </li>
+
+                </ul>
+
+
+            </div>
+
+            <div id="col2">
+                <h3>Demos:</h3>
+
+                <ul>
+                    <li><p class="example-title"><a href="demos/asset-map-fly/index.html">Asset Map Flythrough</a></p>
+
+                        <p>A scene graph that flies through the spatial asset map, loading assets as their kd-nodes
+                            intersect the view frustum.</p>
+                    </li>
+                    <li><p class="example-title"><a href="demos/get-asset/index.html">Testing getAsset</a></p>
+
+                        <p>Simple scene graph that loads the Seymour Plane Collada test model via JSONP.</p>
+                    </li>
+                </ul>
+
+
+            </div>
+            <div id="col3">
+
+                <div id="sjas-status">
+                    <div id="sjas-label">
+                        Server status:
+                    </div>
+                    <div id="sjas-value">
+                        Checking...
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<script type="text/javascript">
+
+    window.showStatus = function(data) {
+        if (data) {
+            if (data.error) {
+                $("#sjas-value").css({ 'background-color': '#ff0000', 'color': '#440000'}).html("Offline");
+            } else if (data.body.toLowerCase() == "ready") {
+                $("#sjas-value").css({ 'background-color': '#99FF99', 'color': '#004400'}).html("Ready!");
+            } else {
+                $("#sjas-value").css({ 'background-color': '#FFCC00', 'color': '#443300'}).html(data.body);
+            }
+        }
+
+        // Remove any old script tags.
+        var script;
+        while (script = document.getElementById('JSONP')) {
+            script.parentNode.removeChild(script);
+            for (var prop in script) {
+                delete script[prop];
+            }
+        }
+    };
+
+    window.getStatus = function() {
+        try {
+            var headID = document.getElementsByTagName("head")[0];
+            var newScript = document.createElement('script');
+            newScript.type = 'text/javascript';
+            newScript.id = 'JSONP';
+            newScript.src = "http:assets.scenejs.org/api/v1/?cmd=getStatus&callback=showStatus";
+            headID.appendChild(newScript);
+        } catch (e) {
+            $("#sjas-value").css({ 'background-color': '#ffcc00'}).html("Offline");
+        }
+    };
+
+    setInterval("window.getStatus()", 1000); // Poll server status
+</script>
+</body>
+</html>
