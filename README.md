@@ -8,6 +8,8 @@ The Asset Server is an experimental content server for SceneJS that
  * provides metadata on assets to assist their integration into scene graphs
  * spatially indexes assets in a kd-tree to support fast queries for assets that intersect given boundaries
 
+It is currently running at [assets.scenejs.org](http://assets.scenejs.org)
+
 [Documentation](http://scenejs.wikispaces.com/Asset+Server) is still under construction, but updated regularly.
 
 API
