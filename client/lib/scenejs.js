@@ -150,27 +150,32 @@ var SceneJS = {
      */
     createNode : function(json) {
         json.type = json.type || "node";
-
         var nodeType = this._nodeTypes[json.type];
         if (!nodeType) {
             throw "Node type not registered: '" + json.type + "'";
         }
-        var cfg = json.cfg || {};
-
-        //---------------------------------------------------------------
-        //
-        //---------------------------------------------------------------
-        cfg.id = json.id;
-        cfg.sid = json.sid;
-
-        var args = [cfg];
+        var newNode = new nodeType.nodeClass(this._copyCfg(json));   // Faster to instantiate class directly
         if (json.nodes) {
             var len = json.nodes.length;
             for (var i = 0; i < len; i++) {
-                args.push(SceneJS.createNode(json.nodes[i]));
+                newNode.addNode(SceneJS.createNode(json.nodes[i]));
             }
         }
-        return nodeType.nodeFunc.apply(this, args);
+        return newNode;
+    },
+
+    /**
+     * Shallow copy of JSON node configs, filters out JSON-specific properties like "nodes"
+     * @private
+     */
+    _copyCfg : function (cfg) {
+        var cfg2 = {};
+        for (var key in cfg) {
+            if (cfg.hasOwnProperty(key) && key != "nodes") {
+                cfg2[key] = cfg[key];
+            }
+        }
+        return cfg2;
     },
 
     /**
@@ -6605,7 +6610,7 @@ SceneJS._shaderModule = new (function() {
                 var hash = [];
                 for (var i = 0; i < lights.length; i++) {
                     var light = lights[i];
-                    hash.push(light.type);
+                    hash.push(light.mode);
                     if (light.specular) {
                         hash.push("s");
                     }
@@ -6624,19 +6629,19 @@ SceneJS._shaderModule = new (function() {
                     var light = _lights[i];
                     activeProgram.setUniform("uLightColor" + i, light.color);
                     activeProgram.setUniform("uLightDiffuse" + i, light.diffuse);
-                    if (light.type == "dir") {
+                    if (light.mode == "dir") {
                         activeProgram.setUniform("uLightDir" + i, light.viewDir);
-                    } else if (light.type == "ambient") {
+                    } else if (light.mode == "ambient") {
                         ambient = ambient ? [
                             ambient[0] + light.color[0],
                             ambient[1] + light.color[1],
                             ambient[2] + light.color[2]
                         ] : light.color;
                     } else {
-                        if (light.type == "point") {
+                        if (light.mode == "point") {
                             activeProgram.setUniform("uLightPos" + i, light.viewPos);
                         }
-                        if (light.type == "spot") {
+                        if (light.mode == "spot") {
                             activeProgram.setUniform("uLightPos" + i, light.viewPos);
                             activeProgram.setUniform("uLightDir" + i, light.viewDir);
                             activeProgram.setUniform("uLightSpotCosCutOff" + i, light.spotCosCutOff);
@@ -6945,13 +6950,13 @@ SceneJS._shaderModule = new (function() {
 
             for (var i = 0; i < lights.length; i++) {
                 var light = lights[i];
-                if (light.type == "dir") {
+                if (light.mode == "dir") {
                     src.push("uniform vec3 uLightDir" + i + ";");
                 }
-                if (light.type == "point") {
+                if (light.mode == "point") {
                     src.push("uniform vec4 uLightPos" + i + ";");
                 }
-                if (light.type == "spot") {
+                if (light.mode == "spot") {
                     src.push("uniform vec4 uLightPos" + i + ";");
                 }
 
@@ -6997,14 +7002,14 @@ SceneJS._shaderModule = new (function() {
         if (lighting) {
             for (var i = 0; i < lights.length; i++) {
                 var light = lights[i];
-                if (light.type == "dir") {
+                if (light.mode == "dir") {
                     src.push("tmpVec = -uLightDir" + i + ";");
                 }
-                if (light.type == "point") {
+                if (light.mode == "point") {
                     src.push("tmpVec = -(uLightPos" + i + ".xyz - tmpVertex.xyz);");
                     src.push("vLightDist" + i + " = length(tmpVec);");          // Distance from light to vertex
                 }
-                if (light.type == "spot") {
+                if (light.mode == "spot") {
                     src.push("tmpVec = -(uLightPos" + i + ".xyz - tmpVertex.xyz);");
                     src.push("vLightDist" + i + " = length(tmpVec);");          // Distance from light to vertex
 
@@ -7079,13 +7084,13 @@ SceneJS._shaderModule = new (function() {
             for (var i = 0; i < lights.length; i++) {
                 var light = lights[i];
                 src.push("uniform vec3  uLightColor" + i + ";");
-                if (light.type == "point") {
+                if (light.mode == "point") {
                     src.push("uniform vec4   uLightPos" + i + ";");
                 }
-                if (light.type == "dir") {
+                if (light.mode == "dir") {
                     src.push("uniform vec3   uLightDir" + i + ";");
                 }
-                if (light.type == "spot") {
+                if (light.mode == "spot") {
                     src.push("uniform vec4   uLightPos" + i + ";");
                     src.push("uniform vec3   uLightDir" + i + ";");
                     src.push("uniform float  uLightSpotCosCutOff" + i + ";");
@@ -7190,7 +7195,7 @@ SceneJS._shaderModule = new (function() {
 
                 /* Point Light
                  */
-                if (light.type == "point") {
+                if (light.mode == "point") {
                     src.push("dotN = max(dot(vNormal,lightVec),0.0);");
                     src.push("if (dotN > 0.0) {");
                     src.push("  attenuation = 1.0 / (" +
@@ -7209,7 +7214,7 @@ SceneJS._shaderModule = new (function() {
 
                 /* Directional Light
                  */
-                if (light.type == "dir") {
+                if (light.mode == "dir") {
                     src.push("dotN = max(dot(vNormal,lightVec),0.0);");
                     if (light.diffuse) {
                         src.push("lightValue += dotN * uLightColor" + i + ";");
@@ -7222,7 +7227,7 @@ SceneJS._shaderModule = new (function() {
 
                 /* Spot light
                  */
-                if (light.type == "spot") {
+                if (light.mode == "spot") {
                     src.push("spotFactor = max(dot(normalize(uLightDir" + i + "), lightVec));");
                     src.push("if ( spotFactor > 20) {");
                     src.push("  spotFactor = pow(spotFactor, uLightSpotExp" + i + ");");
@@ -7767,11 +7772,11 @@ SceneJS.Renderer.prototype._render = function(traversalContext) {
  * Stores geometry in vertex buffers in video RAM, caching them there under a least-recently-used eviction policy
  * mediated by the "memory" backend.
  *
- * Geometry elements are identified by type IDs, which may either be supplied by scene nodes, or automatically
+ * Geometry elements are identified by resource IDs, which may either be supplied by scene nodes, or automatically
  * generated by this backend.
  *
- * After creating geometry, the backend returns to the node the type ID for the node to retain. The node
- * can then pass in the type ID to test if the geometry still exists (perhaps it has been evicted) or to have the
+ * After creating geometry, the backend returns to the node the resource ID for the node to retain. The node
+ * can then pass in the resource ID to test if the geometry still exists (perhaps it has been evicted) or to have the
  * backend render the geometry.
  *
  * The backend is free to evict whatever geometry it chooses between scene traversals, so the node must always check
@@ -7788,7 +7793,7 @@ SceneJS.Renderer.prototype._render = function(traversalContext) {
  * then bind and draw the index buffer.
  *
  * The backend avoids needlessly re-exporting and re-binding geometry (eg. when rendering a bunch of cubes in a row)
- * by tracking the type of the last geometry rendered. That type is maintained until another either geoemetry is rendered,
+ * by tracking the resource of the last geometry rendered. That resource is maintained until another either geoemetry is rendered,
  * the canvas switches, shader deactivates or scene deactivates.
  *
  *  @private
@@ -7800,7 +7805,7 @@ SceneJS._geometryModule = new (function() {
     var canvas;
     var geoMaps = {};                   // Geometry map for each canvas
     var currentGeoMap = null;
-    var currentBoundGeoType;            // Type of geometry currently bound to shader
+    var currentBoundGeoResource;            // Type of geometry currently bound to shader
 
     SceneJS._eventModule.addListener(
             SceneJS._eventModule.TIME_UPDATED,
@@ -7813,7 +7818,7 @@ SceneJS._geometryModule = new (function() {
             function() {
                 canvas = null;
                 currentGeoMap = null;
-                currentBoundGeoType = null;
+                currentBoundGeoResource = null;
             });
 
     SceneJS._eventModule.addListener(
@@ -7824,7 +7829,7 @@ SceneJS._geometryModule = new (function() {
                 }
                 canvas = c;
                 currentGeoMap = geoMaps[c.canvasId];
-                currentBoundGeoType = null;
+                currentBoundGeoResource = null;
             }); 
 
     SceneJS._eventModule.addListener(
@@ -7832,19 +7837,19 @@ SceneJS._geometryModule = new (function() {
             function() {
                 canvas = null;
                 currentGeoMap = null;
-                currentBoundGeoType = null;
+                currentBoundGeoResource = null;
             });
 
     SceneJS._eventModule.addListener(
             SceneJS._eventModule.SHADER_ACTIVATED,
             function() {
-                currentBoundGeoType = null;
+                currentBoundGeoResource = null;
             });
 
     SceneJS._eventModule.addListener(
             SceneJS._eventModule.SHADER_DEACTIVATED,
             function() {
-                currentBoundGeoType = null;
+                currentBoundGeoResource = null;
             });
 
     SceneJS._eventModule.addListener(
@@ -7852,15 +7857,15 @@ SceneJS._geometryModule = new (function() {
             function() {
                 for (var canvasId in geoMaps) {    // Destroy geometries on all canvases
                     var geoMap = geoMaps[canvasId];
-                    for (var type in geoMap) {
-                        var geometry = geoMap[type];
+                    for (var resource in geoMap) {
+                        var geometry = geoMap[resource];
                         destroyGeometry(geometry);
                     }
                 }
                 canvas = null;
                 geoMaps = {};
                 currentGeoMap = null;
-                currentBoundGeoType = null;
+                currentBoundGeoResource = null;
             });
 
     /**
@@ -7869,9 +7874,9 @@ SceneJS._geometryModule = new (function() {
      * @private
      */
     function destroyGeometry(geo) {
-        //  SceneJS._loggingModule.debug("Destroying geometry : '" + geo.type + "'");
-        if (geo.type == currentBoundGeoType) {
-            currentBoundGeoType = null;
+        //  SceneJS._loggingModule.debug("Destroying geometry : '" + geo.resource + "'");
+        if (geo.resource == currentBoundGeoResource) {
+            currentBoundGeoResource = null;
         }
         if (document.getElementById(geo.canvas.canvasId)) { // Context won't exist if canvas has disappeared
             if (geo.vertexBuf) {
@@ -7892,7 +7897,7 @@ SceneJS._geometryModule = new (function() {
         }
         var geoMap = geoMaps[geo.canvas.canvasId];
         if (geoMap) {
-            geoMap[geo.type] = null;
+            geoMap[geo.resource] = null;
         }
     }
 
@@ -7907,8 +7912,8 @@ SceneJS._geometryModule = new (function() {
                 for (var canvasId in geoMaps) {
                     var geoMap = geoMaps[canvasId];
                     if (geoMap) {
-                        for (var type in geoMap) {
-                            var geometry = geoMap[type];
+                        for (var resource in geoMap) {
+                            var geometry = geoMap[resource];
                             if (geometry) {
                                 if (geometry.lastUsed < earliest
                                         && document.getElementById(geometry.canvas.canvasId)) { // Canvas must still exist
@@ -7920,7 +7925,7 @@ SceneJS._geometryModule = new (function() {
                     }
                 }
                 if (evictee) {
-                    SceneJS._loggingModule.warn("Evicting geometry from memory: " + evictee.type);
+                    SceneJS._loggingModule.warn("Evicting geometry from memory: " + evictee.resource);
                     destroyGeometry(evictee);
                     return true;
                 }
@@ -7980,24 +7985,24 @@ SceneJS._geometryModule = new (function() {
 
 
     /**
-     * Tests if the given geometry type exists on the currently active canvas
+     * Tests if the given geometry resource exists on the currently active canvas
      * @private
      */
-    this.testGeometryExists = function(type) {
-        return currentGeoMap[type] ? true : false;
+    this.testGeometryExists = function(resource) {
+        return currentGeoMap[resource] ? true : false;
     };
 
     /**
-     * Creates geometry on the active canvas - can optionally take a type ID. On success, when ID given
+     * Creates geometry on the active canvas - can optionally take a resource ID. On success, when ID given
      * will return that ID, else if no ID given, will return a generated one.
      * @private
      */
-    this.createGeometry = function(type, data) {
-        if (!type) {
-            type = SceneJS._createKeyForMap(currentGeoMap, "t");
+    this.createGeometry = function(resource, data) {
+        if (!resource) {
+            resource = SceneJS._createKeyForMap(currentGeoMap, "t");
         }
 
-        //   SceneJS._loggingModule.debug("Creating geometry: '" + type + "'");
+        //   SceneJS._loggingModule.debug("Creating geometry: '" + resource + "'");
 
         if (!data.primitive) { // "points", "lines", "line-loop", "line-strip", "triangles", "triangle-strip" or "triangle-fan"
             throw SceneJS._errorModule.fatalError(
@@ -8044,7 +8049,7 @@ SceneJS._geometryModule = new (function() {
             var geo = {
                 fixed : true, // TODO: support dynamic geometry
                 primitive: getPrimitiveType(context, data.primitive),
-                type: type,
+                resource: resource,
                 lastUsed: time,
                 canvas : canvas,
                 context : context,
@@ -8054,8 +8059,8 @@ SceneJS._geometryModule = new (function() {
                 uvBuf: uvBuf,
                 uvBuf2: uvBuf2
             };
-            currentGeoMap[type] = geo;
-            return type;
+            currentGeoMap[resource] = geo;
+            return resource;
         } catch (e) { // Allocation failure - delete whatever buffers got allocated
 
             if (vertexBuf) {
@@ -8083,11 +8088,11 @@ SceneJS._geometryModule = new (function() {
      * using findGeometry, and have created it if neccessary with createGeometry.
      * @private
      */
-    this.drawGeometry = function(type) {
+    this.drawGeometry = function(resource) {
         if (!canvas) {
             throw SceneJS._errorModule.fatalError(SceneJS.errors.NoCanvasActiveException("No canvas active"));
         }       
-        var geo = currentGeoMap[type];
+        var geo = currentGeoMap[resource];
 
         SceneJS._eventModule.fireEvent(SceneJS._eventModule.GEOMETRY_UPDATED, geo);  // Gives shader backend a chance to generate a shader
 
@@ -8104,7 +8109,7 @@ SceneJS._geometryModule = new (function() {
         /* Dont re-export and bind if already the last one exported and bound - this is the case when
          * we're drawing a batch of the same object, Eg. a bunch of cubes in a row
          */
-      //  if (currentBoundGeoType != type) {
+      //  if (currentBoundGeoResource != resource) {
             for (var i = 0; i < 8; i++) {
                 context.disableVertexAttribArray(i);
             }
@@ -8114,7 +8119,7 @@ SceneJS._geometryModule = new (function() {
 
             geo.indexBuf.bind(); // Bind index buffer
 
-            currentBoundGeoType = type;
+            currentBoundGeoResource = resource;
        // }
 
         /* Draw geometry
@@ -8129,7 +8134,7 @@ SceneJS._geometryModule = new (function() {
          */
         //                    if (!geo.fixed) {
         //                        destroyGeometry(geo);
-        //                        currentBoundGeoType = null;
+        //                        currentBoundGeoResource = null;
         //                    }
     };
 })();
@@ -8139,11 +8144,11 @@ SceneJS._geometryModule = new (function() {
  * <p><b>Example Usage</b></p><p>Definition of a cube, with normals and UV texture coordinates, with coordinates shown here only for the first face:</b></p><pre><code>
  * var g = new SceneJS.Geometry({
  *
- *        // Optional geometry type ID. If some other Geometry node with this type has previously
+ *        // Optional geometry resource ID. If some other Geometry node with this resource has previously
  *        // been rendered in the scene graph then this Geometry will just re-use the geometry
  *        // (IE. vertex buffers etc.) that were created by it.
  *
- *        type: "cube_5_5_5",   // Optional
+ *        resource: "cube_5_5_5",   // Optional
  *
  *        // Mandatory primitive type - "points", "lines", "line-loop", "line-strip", "triangles",
  *        // "triangle-strip" or "triangle-fan".
@@ -8222,7 +8227,7 @@ SceneJS._geometryModule = new (function() {
  * @constructor
  * Create a new SceneJS.Geometry
  * @param {Object} [cfg] Static configuration object
- * @param {String} cfg.type Optional geometry type - Geometry nodes with same value of this will share the same vertex buffers
+ * @param {String} cfg.resource Optional geometry resource - Geometry nodes with same value of this will share the same vertex buffers
  * @param {String} cfg.primitive The primitive type - "points", "lines", "line-loop", "line-strip", "triangles", "triangle-strip" or "triangle-fan"
  * @param {double[]} cfg.positions Flattened array of 3D coordinates, three elements each
  * @param {double[]} [cfg.normals = []] Flattened array of 3D vertex normal vectors, three elements each
@@ -8240,7 +8245,7 @@ SceneJS.Geometry.prototype._init = function(params) {
     this._create = null; // Callback to create geometry
     this._handle = null; // Handle to created geometry
 
-    this._type = params.type;       // Optional - can be null
+    this._resource = params.resource;       // Optional - can be null
     if (params.create instanceof Function) {
         this._create = params.create;
     } else {
@@ -8264,9 +8269,9 @@ SceneJS.Geometry.prototype._render = function(traversalContext) {
     }
     if (!this._handle) { // Either not created yet or has been evicted
         if (this._create) { // Use callback to create
-            this._handle = SceneJS._geometryModule.createGeometry(this._type, this._create());
+            this._handle = SceneJS._geometryModule.createGeometry(this._resource, this._create());
         } else { // Or supply arrays
-            this._handle = SceneJS._geometryModule.createGeometry(this._type, this._geo);
+            this._handle = SceneJS._geometryModule.createGeometry(this._resource, this._geo);
         }
     }
     SceneJS._geometryModule.drawGeometry(this._handle);
@@ -8290,9 +8295,9 @@ SceneJS.Teapot = function() {
     SceneJS.Geometry.apply(this, arguments);
     this._nodeType = "teapot";
 
-    /* Type ID ensures that we save memory by reusing any teapot that has already been created
+    /* Resource ID ensures that we save memory by reusing any teapot that has already been created
      */
-    this._type = "teapot";
+    this._resource = "teapot";
 
     /* Callback that does the creation when teapot not created yet
      * @private
@@ -14148,10 +14153,10 @@ SceneJS.Cube.prototype._init = function(params) {
 
     var solid = (params.solid != undefined) ? params.solid : true;
 
-    /* Type ID ensures that we reuse any scube that has already been created with
+    /* Resource ID ensures that we reuse any scube that has already been created with
      * these parameters instead of wasting memory
      */
-    this._type = "cube_" + x + "_" + y + "_" + z + (solid ? "_solid" : "wire");
+    this._resource = "cube_" + x + "_" + y + "_" + z + (solid ? "_solid" : "wire");
 
     /* Callback that does the creation in case we can't find matching cube to reuse
      */
@@ -14313,10 +14318,10 @@ SceneJS.Sphere.prototype._init = function(params) {
     var slices = params.slices || 30;
     var rings = params.rings || 30;
 
-    /* Type ID ensures that we reuse any sphere that has already been created with
+    /* Resource ID ensures that we reuse any sphere that has already been created with
      * these parameters instead of wasting memory
      */
-    this._type = "sphere_" + rings + "_" + slices;
+    this._resource = "sphere_" + rings + "_" + slices;
 
     /* Callback that does the creation in case we can't find matching sphere to reuse     
      */
@@ -15839,7 +15844,7 @@ SceneJS._vectorTextModule = new (function() {
                         continue;
                     }
 
-                    geo.positions.push(x + a[0] * mag);
+                    geo.positions.push(x - a[0] * mag);
                     geo.positions.push(y + a[1] * mag);
                     geo.positions.push(0);
 
@@ -15865,7 +15870,7 @@ SceneJS._vectorTextModule = new (function() {
                     }
                     needLine = true;
                 }
-                x += c.width * mag;
+                x -= c.width * mag;
 
             }
             y += 25 * mag;
@@ -15900,7 +15905,7 @@ SceneJS.Text.prototype._init = function(params) {
     this._create = function() {
         var geo = SceneJS._vectorTextModule.getGeometry(1, 0, 0, params.text); // Unit size
         return {
-            type: this._id,
+            resource: this._id, // Assuming text geometry varies a lot - don't try to share VBOs
             primitive : "lines",
             positions : geo.positions,
             normals: [],
@@ -17628,9 +17633,9 @@ SceneJS._lightingModule = new (function() {
     };
 
     function instanceLight(light) {
-        if (light.type == "point") {
+        if (light.mode == "point") {
             light.viewPos = SceneJS._math_transformPoint3(viewMat, SceneJS._math_transformPoint3(modelMat, light.pos));
-        } else if (light.type == "dir") {
+        } else if (light.mode == "dir") {
             light.viewDir = SceneJS._math_transformVector3(viewMat, SceneJS._math_transformVector3(modelMat, light.dir));
         }
     }
@@ -17642,17 +17647,17 @@ SceneJS._lightingModule = new (function() {
  * light, the number of which is only limited by video memory.</p>
  * <p>note that SceneJS does not create any default light sources for you, so if you have non-emissive
  * {@link SceneJS.Material}s with no lights you may not see anything in your scene until you add a light.</p>
- * <p>Currently, two kinds of light are supported: point and directional. Point lights have a location, like a lightbulb,
+ * <p>Currently, two modes of light are supported: point and directional. Point lights have a location, like a lightbulb,
  * while directional only have a vector that describes their direction, where they have no actual location since they
  * are an infinite distance away.</p>
- * <p>Therefore, each of these two light types have slightly different properties, as shown in the usage example below.</p>
+ * <p>Therefore, each of these two light modes have slightly different properties, as shown in the usage example below.</p>
 
  * <p><b>Example Usage</b></p><p>This example defines a cube that is illuminated by two light sources, point and directional.
  * The cube has a {@link SceneJS.Material} that define how it reflects the light.</b></p><pre><code>
  *  var l = new SceneJS.Node(
  *
  *         new SceneJS.Light({
- *              type: "point",
+ *              mode: "point",
  *              pos: { x: 100.0, y: 30.0, z: -100.0 }, // Position
  *              color: { r: 0.0, g: 1.0, b: 1.0 },
  *              diffuse: true,   // Contribute to diffuse lighting
@@ -17668,7 +17673,7 @@ SceneJS._lightingModule = new (function() {
  *         }),
  *
  *         new SceneJS.Light({
- *              type: "dir",
+ *              mode: "dir",
  *              color: { r: 1.0, g: 1.0, b: 0.0 },
  *              diffuse: true,
  *              specular: true,
@@ -17699,7 +17704,7 @@ SceneJS.Light = SceneJS.createNodeType("light");
 SceneJS.Light.prototype._init = function(params) {
     params = params || {};
     this._light = {};
-    this.setType(params.type);
+    this.setMode(params.mode);
     this.setColor(params.color);
     this.setDiffuse(params.diffuse);
     this.setSpecular(params.specular);
@@ -17710,25 +17715,25 @@ SceneJS.Light.prototype._init = function(params) {
     this.setQuadraticAttenuation(params.quadraticAttenuation);
 };
 
-/** Sets the light source type
- * @param {String} type Light source type - "dir" or "point"
+/** Sets the lighting mode - eg. "dir" or "point"
+ * @param {String} mode Lighting mode - "dir" or "point"
  * @return {SceneJS.Light} this
  */
-SceneJS.Light.prototype.setType = function(type) {
-    type = type || "dir";
-    if (type != "dir" && type != "point") {
+SceneJS.Light.prototype.setMode = function(mode) {
+    mode = mode || "dir";
+    if (mode != "dir" && mode != "point") {
         throw SceneJS._errorModule.fatalError(new SceneJS.errors.InvalidNodeConfigException(
-                "SceneJS.Light unsupported type - should be 'dir' or 'point' or 'ambient'"));
+                "SceneJS.Light unsupported mode - should be 'dir' or 'point' or 'ambient'"));
     }
-    this._light.type = type;
+    this._light.mode = mode;
     return this;
 };
 
-/** Gets the light source type
- * @return {String} Light source type - "dir" or "point"
+/** Gets the lighting mode - eg. "dir" or "point"
+ * @return {String} Light source mode - "dir" or "point"
  */
-SceneJS.Light.prototype.getType = function() {
-    return this._light.type;
+SceneJS.Light.prototype.getMode = function() {
+    return this._light.mode;
 };
 
 /** Sets the light source color
@@ -17793,7 +17798,7 @@ SceneJS.Light.prototype.getSpecular = function() {
 };
 
 /** Sets the light source object-space position.
- * This is only used when the source is of type "point".
+ * This is only used when the source is of mode "point".
  *
  * @param pos {Object} - Eg. {x: 5.0, y: 5.0, z: 5.0 }
  * @return {SceneJS.Light} this
@@ -17813,7 +17818,7 @@ SceneJS.Light.prototype.getPos = function() {
 };
 
 /** Sets the light source object-space direction vector.
- * This is only used when the source is of type "dir".
+ * This is only used when the source is of mode "dir".
  * Components will fall back on defaults of { x: 0, y: 0, z: -1 } where not supplied;
  * <pre><code>
  * myLight.setDir({  });       // Sets direction of { x : 0.0, y: 0.0, z: -1.0 }
@@ -17838,7 +17843,7 @@ SceneJS.Light.prototype.getDir = function() {
 };
 
 /** Sets the light source constant attenuation factor.
- * This is only used wen the source is of type "point".
+ * This is only used wen the source is of mode "point".
  *
  * @param constantAttenuation {double}
  * @return {SceneJS.Light} this
@@ -17857,7 +17862,7 @@ SceneJS.Light.prototype.getConstantAttenuation = function() {
 };
 
 /** Sets the light source linear attenuation factor.
- * This is only used wen the source is of type "point".
+ * This is only used wen the source is of mode "point".
  *
  * @param linearAttenuation {double}
  * @return {SceneJS.Light} this
@@ -17876,7 +17881,7 @@ SceneJS.Light.prototype.getLinearAttenuation = function() {
 };
 
 /** Sets the light source quadratic attenuation factor.
- * This is only used wen the source is of type "point".
+ * This is only used wen the source is of mode "point".
  *
  * @param quadraticAttenuation {double}
  * @return {SceneJS.Light} this
@@ -18246,7 +18251,7 @@ SceneJS.Material.prototype._render = function(traversalContext) {
  *          new SceneJS.Cube())),
  *
  *      new SceneJS.Interpolator({
- *              type:"linear",   // or 'cosine', 'cubic' or 'constant'
+ *              mode:"linear",   // or 'cosine', 'cubic' or 'constant'
  *              target: "myRotate",
  *              targetProperty: "angle",
  *              keys: [0.0, 1.0, 1.5],       // Instants in time in seconds
@@ -18262,7 +18267,7 @@ SceneJS.Material.prototype._render = function(traversalContext) {
  * @constructor
  * Create a new SceneJS.Interpolator
  * @param {Object} [cfg] Static configuration object
- * @param {String} [cfg.type="linear"] Interpolation type - "linear", "cosine", "cubic" or "constant"
+ * @param {String} [cfg.mode="linear"] Interpolation mode - "linear", "cosine", "cubic" or "constant"
  * @param {String} [cfg.target] ID of target node whose property we'll interpolate
  * @param {String} [cfg.targetProperty] Name of target property on target node
  * @param {double[]} [cfg.keys=[]] Time key values in seconds
@@ -18312,10 +18317,10 @@ SceneJS.Interpolator.prototype._init = function(params) {
     this._key1 = 0;
     this._key2 = 1;
 
-    /* Interpolation type
+    /* Interpolation mode
      */
-    params.type = params.type || 'linear';
-    switch (params.type) {
+    params.mode = params.mode || 'linear';
+    switch (params.mode) {
         case 'linear':
             break;
         case 'constant':
@@ -18337,7 +18342,7 @@ SceneJS.Interpolator.prototype._init = function(params) {
         default:
             throw SceneJS._errorModule.fatalError(
                     new SceneJS.errors.InvalidNodeConfigException(
-                            "SceneJS.Interpolator configuration invalid:  type not supported - " +
+                            "SceneJS.Interpolator configuration invalid:  mode not supported - " +
                             "only 'linear', 'cosine', 'cubic', 'constant' and 'slerp' are supported"));
         /*
 
@@ -18346,7 +18351,7 @@ SceneJS.Interpolator.prototype._init = function(params) {
          break;
          */
     }
-    this._type = params.type;
+    this._mode = params.mode;
     this._once = false;
 };
 
@@ -18366,7 +18371,7 @@ SceneJS.Interpolator.prototype._FOUND = 3;            // Found keys before and a
 SceneJS.Interpolator.prototype._render = function(traversalContext) {
     if (!this._targetFunc) {
 
-        /* Not bound to a target node setter method yet.
+        /* Not bound to a target node setter mode yet.
          *
          * Attempt to bind - if target not found, just try again
          * next render, since it might appear in the scene later.
@@ -18397,7 +18402,7 @@ SceneJS.Interpolator.prototype._render = function(traversalContext) {
     }
     if (this._targetFunc) {
 
-        /* Have target node method - start timer if not started,
+        /* Have target node mode - start timer if not started,
          * update interpolation, feed result into target node setter
          */
         if (!this._timeStarted) {
@@ -18462,7 +18467,7 @@ SceneJS.Interpolator.prototype._findEnclosingFrame = function(key) {
 
 // @private
 SceneJS.Interpolator.prototype._interpolate = function(k) {
-    switch (this._type) {
+    switch (this._mode) {
         case 'linear':
             return this._linearInterpolate(k);
         case 'cosine':
@@ -18475,8 +18480,8 @@ SceneJS.Interpolator.prototype._interpolate = function(k) {
             return this._slerp(k);
         default:
             throw SceneJS._errorModule.fatalError(
-                    new SceneJS.errors.InternalException("SceneJS.Interpolator internal error - interpolation type not switched: '"
-                            + this._type + "'"));
+                    new SceneJS.errors.InternalException("SceneJS.Interpolator internal error - interpolation mode not switched: '"
+                            + this._mode + "'"));
     }
 };
 
