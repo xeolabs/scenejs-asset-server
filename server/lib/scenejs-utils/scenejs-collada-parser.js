@@ -15,8 +15,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
     this._stack = [];
 
     this._currentNode = {
-        type: "node",
-        cfg: {}
+        type: "node"
     };
 
     this._addNode = function(cfg) {
@@ -61,10 +60,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
 
     this._addInfo = function(info) {
         if (this._options.info) {
-            if (!this._currentNode.cfg) {
-                this._currentNode.cfg = {};
-            }
-            this._currentNode.cfg.info = info;
+            this._currentNode.info = info;
         }
     };
 
@@ -76,7 +72,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
         while (this._currentNode) {
             this._closeNode();
         }
-        return this._root || { type: "node", cfg: {} };
+        return this._root || { type: "node" };
     };
 
     /**
@@ -92,11 +88,6 @@ var Parser = function(boundaryBuilder) {  // Constructor
      *
      *           rootNode: {
      *                 type: "node",
-     *
-     *                 cfg: {
-     *                      // ..
-     *                 },
-     *
      *                 nodes: [
      *
      *                      // ...
@@ -306,14 +297,12 @@ var Parser = function(boundaryBuilder) {  // Constructor
             this._openNode({
                 type: "camera",
                 id: this._makeID(cameraTag.getAttribute("id")),
-                cfg: {
-                    optics: {
-                        type: "perspective",
-                        fovy: yfov ? parseFloat(yfov.children[0].nodeValue) : 60.0,
-                        aspect: aspectRatio ? parseFloat(aspectRatio.children[0].nodeValue) : 1.0,
-                        near: znear ? parseFloat(znear.children[0].nodeValue) : 0.1,
-                        far: zfar ? parseFloat(zfar.children[0].nodeValue) : 20000.0
-                    }
+                optics: {
+                    type: "perspective",
+                    fovy: yfov ? parseFloat(yfov.children[0].nodeValue) : 60.0,
+                    aspect: aspectRatio ? parseFloat(aspectRatio.children[0].nodeValue) : 1.0,
+                    near: znear ? parseFloat(znear.children[0].nodeValue) : 0.1,
+                    far: zfar ? parseFloat(zfar.children[0].nodeValue) : 20000.0
                 }
             });
             this._addInfo("camera");
@@ -342,11 +331,9 @@ var Parser = function(boundaryBuilder) {  // Constructor
             this._addNode({
                 type: "light",
                 id: this._makeID(lightTag.getAttribute("id")),
-                cfg:  {
-                    type: "dir",
-                    dir: { x: 0, y: 0, z: -1.0 },
-                    color: this._parseColor(directionalTag.getElementsByTagName("color")[0])
-                }
+                mode: "dir",
+                dir: { x: 0, y: 0, z: -1.0 },
+                color: this._parseColor(directionalTag.getElementsByTagName("color")[0])
             });
             this._addInfo("light");
         }
@@ -358,15 +345,13 @@ var Parser = function(boundaryBuilder) {  // Constructor
             this._addNode({
                 type: "light",
                 id: this._makeID(lightTag.getAttribute("id")),
-                cfg : {
-                    info: this._getInfo("light"),
-                    type: "point",
-                    pos: { x: 0, y: 0, z: 0},
-                    color: this._parseColor(pointTag.getElementsByTagName("color")[0]),
-                    constantAttenuation : constantAttenuation ? parseFloat(constantAttenuation) : 1.0,
-                    linearAttenuation : linearAttenuation ? parseFloat(linearAttenuation) : 0.0,
-                    quadraticAttenuation : quadraticAttenuation ? parseFloat(quadraticAttenuation) : 0.0
-                }
+                info: this._getInfo("light"),
+                mode: "point",
+                pos: { x: 0, y: 0, z: 0},
+                color: this._parseColor(pointTag.getElementsByTagName("color")[0]),
+                constantAttenuation : constantAttenuation ? parseFloat(constantAttenuation) : 1.0,
+                linearAttenuation : linearAttenuation ? parseFloat(linearAttenuation) : 0.0,
+                quadraticAttenuation : quadraticAttenuation ? parseFloat(quadraticAttenuation) : 0.0
             });
             this._addInfo("light");
         }
@@ -380,16 +365,14 @@ var Parser = function(boundaryBuilder) {  // Constructor
             this._addNode({
                 type: "light",
                 id: this._makeID(lightTag.getAttribute("id")),
-                cfg : {
-                    type: "spot",
-                    // TODO: position & dir?
-                    color: this._parseColor(spot.getElementsByTagName("color")[0]) ,
-                    constantAttenuation : constantAttenuation ? parseFloat(constantAttenuation) : 1.0,
-                    linearAttenuation : linearAttenuation ? parseFloat(linearAttenuation) : 0.0,
-                    quadraticAttenuation : quadraticAttenuation ? parseFloat(quadraticAttenuation) : 0.0,
-                    falloffAngle : falloffAngle ? parseFloat(falloffAngle) : 180.0,
-                    falloffExponent : falloffExponent ? parseFloat(falloffExponent) : 0.0
-                }
+                mode: "spot",
+                // TODO: position & dir?
+                color: this._parseColor(spot.getElementsByTagName("color")[0]) ,
+                constantAttenuation : constantAttenuation ? parseFloat(constantAttenuation) : 1.0,
+                linearAttenuation : linearAttenuation ? parseFloat(linearAttenuation) : 0.0,
+                quadraticAttenuation : quadraticAttenuation ? parseFloat(quadraticAttenuation) : 0.0,
+                falloffAngle : falloffAngle ? parseFloat(falloffAngle) : 180.0,
+                falloffExponent : falloffExponent ? parseFloat(falloffExponent) : 0.0
             });
             this._addInfo("light");
         }
@@ -420,12 +403,10 @@ var Parser = function(boundaryBuilder) {  // Constructor
 
         this._openNode({ type: "material",
             id: this._makeID(effectId),
-            cfg: {
-                baseColor:     materialData.baseColor,
-                specularColor: materialData.specularColor ,
-                shine:         10.0,  // TODO: parse from shininess?
-                specular: 1
-            }
+            baseColor:     materialData.baseColor,
+            specularColor: materialData.specularColor ,
+            shine:         10.0,  // TODO: parse from shininess?
+            specular: 1
         });
         this._addInfo("material");
 
@@ -449,9 +430,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
             this._addNode({
                 type: "texture",
                 sid: "texture",
-                cfg: {
-                    layers: layers
-                }
+                layers: layers
             });
         }
         this._closeNode();
@@ -613,11 +592,9 @@ var Parser = function(boundaryBuilder) {  // Constructor
         this._addNode({
             type: "instance",
             id: this._makeID(materialId),
-            cfg: {
-                target : this._makeTarget(effectId),
-                info: this._getInfo("instance_effect"),
-                mustExist: true
-            }
+            target : this._makeTarget(effectId),
+            info: this._getInfo("instance_effect"),
+            mustExist: true
         });
         //)
     };
@@ -700,9 +677,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
                 var extents = this._expandExtentsByPositions(this._newExtents(), outputData.VERTEX);
                 this._openNode({
                     type: "boundingBox",
-                    cfg: {
-                        boundary: extents
-                    }
+                    boundary: extents
                 });
             }
 
@@ -712,10 +687,8 @@ var Parser = function(boundaryBuilder) {  // Constructor
             if (materialName) {
                 this._openNode({
                     type: "instance",
-                    cfg: {
-                        target: {
-                            name: materialName  // Symbolic name for Instance URI, binds to incoming configs
-                        }
+                    target: {
+                        name: materialName  // Symbolic name for Instance URI, binds to incoming configs
                     }
                 });
                 this._addInfo("Target Material Symbol is dynamically configured on this Geometry Symbol when instanced");
@@ -734,14 +707,12 @@ var Parser = function(boundaryBuilder) {  // Constructor
              */
             this._addNode({
                 type: "geometry",
-                cfg: {
-                    info: this._getInfo("geometry"),
-                    positions: outputData.VERTEX,
-                    normals: outputData.NORMAL,
-                    uv : outputData.TEXCOORD0,
-                    uv2 : outputData.TEXCOORD1,
-                    indices: faces
-                }
+                info: this._getInfo("geometry"),
+                positions: outputData.VERTEX,
+                normals: outputData.NORMAL,
+                uv : outputData.TEXCOORD0,
+                uv2 : outputData.TEXCOORD1,
+                indices: faces
             });
             if (materialName) {
                 this._closeNode(); // Material instance
@@ -1089,10 +1060,8 @@ var Parser = function(boundaryBuilder) {  // Constructor
                             type: "instance",
                             id: childId,
                             sid: childSID,
-                            cfg: {
-                                target : this._makeTarget(childTag.getAttribute("url").substr(1)),
-                                mustExist: true
-                            }
+                            target : this._makeTarget(childTag.getAttribute("url").substr(1)),
+                            mustExist: true
                         });
                         this._addInfo("instance_node");
                         break;
@@ -1103,10 +1072,8 @@ var Parser = function(boundaryBuilder) {  // Constructor
                             type: "instance",
                             id: childId,
                             sid: childSID,
-                            cfg: {
-                                target : this._makeTarget(childTag.getAttribute("url").substr(1)),
-                                mustExist: true
-                            }
+                            target : this._makeTarget(childTag.getAttribute("url").substr(1)),
+                            mustExist: true
                         });
                         this._addInfo("instance_visual_scene");
                         break;
@@ -1122,9 +1089,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
                             type: "instance",
                             id: childId,
                             sid: childSID,
-                            cfg: {
-                                target : this._makeTarget(childTag.getAttribute("url").substr(1))
-                            }
+                            target : this._makeTarget(childTag.getAttribute("url").substr(1))
                         });
                         this._addInfo("instance_camera");
 
@@ -1132,9 +1097,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
                             type: "instance",
                             id: childId,
                             sid: childSID,
-                            cfg: {
-                                target : this._makeTarget(visualSceneId)
-                            }
+                            target : this._makeTarget(visualSceneId)
                         });
                         this._addInfo("instance_isual_scene");
 
@@ -1147,10 +1110,8 @@ var Parser = function(boundaryBuilder) {  // Constructor
                             type: "instance",
                             id: childId,
                             sid: childSID,
-                            cfg: {
-                                target : this._makeTarget(childTag.getAttribute("url").substr(1)),
-                                mustExist: true
-                            }
+                            target : this._makeTarget(childTag.getAttribute("url").substr(1)),
+                            mustExist: true
                         });
                         this._addInfo("instance");
                         break;
@@ -1203,12 +1164,10 @@ var Parser = function(boundaryBuilder) {  // Constructor
             type: "rotate",
             id: this._makeID(rotateTag.getAttribute("id")),
             sid: rotateTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
                 x: x,
                 y: y,
                 z: z,
                 angle: angle
-            }
         });
         this._addInfo("rotate");
         this._boundaryBuilder.pushRotate(angle, [x, y, z]);
@@ -1226,9 +1185,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
             type: "matrix",
             id: this._makeID(matrixTag.getAttribute("id")),
             sid: matrixTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
                 elements:elements
-            }
         });
         this._addInfo("matrix");
         this._boundaryBuilder.pushMatrix(elements);
@@ -1241,11 +1198,9 @@ var Parser = function(boundaryBuilder) {  // Constructor
             type: "translate",
             id: this._makeID(translateTag.getAttribute("id")),
             sid: translateTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
                 x: array[0],
                 y: array[1],
                 z: array[2]
-            }
         });
         this._addInfo("translate");
         this._boundaryBuilder.pushTranslate(array);
@@ -1258,11 +1213,9 @@ var Parser = function(boundaryBuilder) {  // Constructor
             type: "scale",
             id: this._makeID(scaleTag.getAttribute("id")),
             sid: scaleTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
                 x: array[0],
                 y: array[1],
                 z: array[2]
-            }
         });
         this._addInfo("scale");
         this._boundaryBuilder.pushScale(array);
@@ -1275,7 +1228,6 @@ var Parser = function(boundaryBuilder) {  // Constructor
             type: "lookAt",
             id: this._makeID(lookatTag.getAttribute("id")),
             sid: lookatTag.getAttribute("sid") || "lookat",
-            cfg: {
                 eye: {
                     x: array[0],
                     y: array[1],
@@ -1291,7 +1243,6 @@ var Parser = function(boundaryBuilder) {  // Constructor
                     y: array[7],
                     z: array[8]
                 }
-            }
         });
         this._addInfo("lookat");
     };
@@ -1318,20 +1269,16 @@ var Parser = function(boundaryBuilder) {  // Constructor
         if (params) {
             this._openNode({
                 type: "withConfigs",
-                cfg: {
                     configs: {
                         "*": params
                     }
-                }
             });
         }
         var id = instanceGeometryTag.getAttribute("url").substr(1);
         this._addNode({
             type: "instance",
-            cfg: {
                 target : this._makeTarget(id),
                 mustExist: true
-            }
         });
         this._addInfo("instance_geometry");
         this._boundaryBuilder.instanceGeometry(id);
@@ -1349,9 +1296,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
         this._openNode({
             type: "node",
             id: this._makeID(symbolID),
-            cfg: {
                 id: symbolID
-            }
         });
         this._addInfo("symbol_scene");
         this._addComment(([
@@ -1366,7 +1311,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
         for (var i = 0; i < ivsTags.length; i++) {
             this._parseInstanceVisualScene(ivsTags[i]);
         }
-        this._closeNode(); 
+        this._closeNode();
         this._closeNode();  // Library
         this._manifest.symbols.defaultSymbol = {
             description: "scene - scene graph base",
@@ -1380,9 +1325,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
         this._openNode({
             type: "instance",
             id:  this._makeID(instanceVisualSceneTag.getAttribute("id")),
-            cfg: {
                 target : this._makeTarget(target)
-            }
         });
         this._addInfo("instance_visual_scene");
         this._closeNode();
@@ -1404,9 +1347,7 @@ var Parser = function(boundaryBuilder) {  // Constructor
         this._addNode({
             type: "instance",
             id: this._baseID,
-            cfg: {
                 target: this._manifest.symbols.defaultSymbol.id
-            }
         });
         this._addComment(([
             "Instantiates one of the symbols nodes in this model. Recall that each symbol node embodies either ",

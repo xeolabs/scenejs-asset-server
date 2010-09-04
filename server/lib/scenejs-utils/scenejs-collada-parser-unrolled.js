@@ -24,11 +24,6 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
      *
      *           rootNode: {
      *                 type: "node",
-     *
-     *                 cfg: {
-     *                      // ..
-     *                 },
-     *
      *                 nodes: [
      *
      *                      // ...
@@ -158,9 +153,7 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
          */
         this._openNode({
             type: "node",
-            id: this._makeID(symbolID),
-            cfg: {
-            }
+            id: this._makeID(symbolID)
         });
         var ivsTags = sceneTag.getElementsByTagName("instance_visual_scene");
         for (var i = 0; i < ivsTags.length; i++) {
@@ -321,12 +314,10 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
             type: "rotate",
             id: this._makeID(rotateTag.getAttribute("id")),
             sid: rotateTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
-                x: x,
-                y: y,
-                z: z,
-                angle: angle
-            }
+            x: x,
+            y: y,
+            z: z,
+            angle: angle
         });
         this._boundaryBuilder.pushRotate(angle, [x, y, z]);
     };
@@ -343,9 +334,7 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
             type: "matrix",
             id: this._makeID(matrixTag.getAttribute("id")),
             sid: matrixTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
-                elements:elements
-            }
+            elements:elements
         });
         this._boundaryBuilder.pushMatrix(elements);
     };
@@ -356,11 +345,9 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
             type: "translate",
             id: this._makeID(translateTag.getAttribute("id")),
             sid: translateTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
-                x: array[0],
-                y: array[1],
-                z: array[2]
-            }
+            x: array[0],
+            y: array[1],
+            z: array[2]
         });
         this._boundaryBuilder.pushTranslate(array);
     };
@@ -371,11 +358,9 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
             type: "scale",
             id: this._makeID(scaleTag.getAttribute("id")),
             sid: scaleTag.getAttribute("sid") || this._randomSID(),
-            cfg: {
-                x: array[0],
-                y: array[1],
-                z: array[2]
-            }
+            x: array[0],
+            y: array[1],
+            z: array[2]
         });
         this._boundaryBuilder.pushScale(array);
     };
@@ -470,9 +455,7 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
                 var extents = this._expandExtentsByPositions(this._newExtents(), outputData.VERTEX);
                 this._openNode({
                     type: "boundingBox",
-                    cfg: {
-                        boundary: extents
-                    }
+                    boundary: extents
                 });
             }
 
@@ -491,13 +474,11 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
                  */
                 this._addNode({
                     type: "geometry",
-                    cfg: {
-                        positions: outputData.VERTEX,
-                        normals: outputData.NORMAL,
-                        uv : outputData.TEXCOORD0,
-                        uv2 : outputData.TEXCOORD1,
-                        indices: faces
-                    }
+                    positions: outputData.VERTEX,
+                    normals: outputData.NORMAL,
+                    uv : outputData.TEXCOORD0,
+                    uv2 : outputData.TEXCOORD1,
+                    indices: faces
                 });
             }
 
@@ -706,12 +687,10 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
 
         this._openNode({ type: "material",
             id: this._makeID(effectId),
-            cfg: {
-                baseColor:     materialData.baseColor,
-                specularColor: materialData.specularColor ,
-                shine:         10.0,  // TODO: parse from shininess?
-                specular: 1
-            }
+            baseColor:     materialData.baseColor,
+            specularColor: materialData.specularColor ,
+            shine:         10.0,  // TODO: parse from shininess?
+            specular: 1
         });
 
         /* Add SceneJS.Texture child for textures data
@@ -734,9 +713,7 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
             this._openNode({
                 type: "texture",
                 sid: "texture",
-                cfg: {
-                    layers: layers
-                }
+                layers: layers
             });
             addGeometry.call(this);
             this._closeNode(); // texture
@@ -884,8 +861,7 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
     this._stack = [];
 
     this._currentNode = {
-        type: "node",
-        cfg: {}
+        type: "node"
     };
 
     this._addNode = function(cfg) {
@@ -926,10 +902,7 @@ var SceneJS_ColladaToJSONParser_Unrolled = function(boundaryBuilder) {  // Const
 
     this._addInfo = function(info) {
         if (this._options.info) {
-            if (!this._currentNode.cfg) {
-                this._currentNode.cfg = {};
-            }
-            this._currentNode.cfg.info = info;
+            this._currentNode.info = info;
         }
     };
 
