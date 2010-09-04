@@ -117,7 +117,7 @@ exports.start = function(customSettings, cb) {
                                                 function (result) {
                                                     if (result.error) {
                                                         server.send(conn._id, createErrorMessage(501, result.error));
-                                                    } else {       
+                                                    } else {
                                                         server.send(conn._id, createMessage(result.body));
                                                     }
                                                 });
@@ -293,8 +293,8 @@ function service(params, cb) {
                 break;
 
             case "clientMessages" :
-                    log("client messages");
-                assetMap.clientMessages(params, cb);
+                log("client messages");
+                handleMessages(params, cb);
                 break;
 
             default:
@@ -305,6 +305,63 @@ function service(params, cb) {
         }
     }
 }
+
+
+function handleMessages(params, cb) {
+    if (!params.messages) {
+        cb({ error: 500, body: "clientMessages.messages missing" });
+        return;
+    }
+    log("SceneServer.AssetMap: clientMessages " + params.messages.length);
+
+    var messages = [];
+
+    /* Process each message
+     */
+    var len = params.messages.length;
+    var message;
+    for (var i = 0; i < len; i++) {
+        message = params.messages[i];
+        if (!message.cmd) {
+            cb({ error: 500, body: "clientMessages - message cmd missing" });
+            return;
+        }
+        message.params = message.params || {};
+        switch (message.cmd) {
+            case "getAssetMap" :
+                assetMap.getAssetMap(
+                        message.params,
+                        function(result) {
+                            if (result.error) {
+                                cb(result);
+                                return;
+                            }
+                            messages.push({
+                                cmd: "assetMap",
+                                params: {
+                                    nodeID: message.params.nodeID,
+                                    map: result.body
+                                }
+                            });
+                        });
+                break;
+
+            default:
+                cb({
+                    error: 500,
+                    body: "clientMessages - unsupported message: " + message.cmd
+                });
+                return;
+        }
+    }
+    var json = JSON.stringify(messages);
+    cb({
+        format : "json",
+        body: json
+    });
+}
+;
+
 
 function wrapInCallback(callback, str) {
     return [callback, "(", str, ")"].join("");

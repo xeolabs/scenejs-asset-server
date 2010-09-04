@@ -20,11 +20,14 @@ var exampleScene = SceneJS.scene({
     canvasId: "theCanvas",
     loggingElementId: "theLoggingDiv" },
 
-    /* Connection to Asset Server
+    /* Our scene controller is this Socket node. It's in charge of all incoming and outgoing
+     * WS and HTTP messages and, for simplicity, is also in charge of adding content and setting
+     * state on various other nodes in the scene graph. There are lots of other ways you could
+     * structure this sort of thing.
      */
-        SceneJS.socket({
-            id: "scene-socket",                             // Enables sub-nodes to fire events straight at this Socket
-            uri: "ws://localhost:8888/api/v1/",             // Asset Server URL
+        new SceneJS.Socket({
+            id:     "controller",                       // Scene nodes fire events at this Socket
+            uri:    "ws://" + mapFlyDefs.SERVER_URL,    // Asset Server URL
             messages: [
                 {
                     cmd: "clientMessages",
@@ -39,7 +42,8 @@ var exampleScene = SceneJS.scene({
                 }
             ],
 
-            /* Listen to events fired at/by this Socket
+            /* Listen to events within this socket, as well as events
+             * fired at it by other scene nodes
              */
             listeners: (function () {
                 var eventBuffer = [];                       // Outgoing messages buffer
@@ -67,11 +71,11 @@ var exampleScene = SceneJS.scene({
                         }
                     },
 
-                    "msg-sent": function(message) {         // Socket messages sent
+                    "msg-sent": function(message) {         // Message(s) sent
                         alert(JSON.stringify(message));
                     },
 
-                    "msg-received" : function(event) {      // Incoming messages from asset server
+                    "msg-received" : function(event) {      // Message(s) arrived from server
                         var params = event.params;
                         if (params && params.message) {
                             if (params.message.error) {
@@ -90,7 +94,12 @@ var exampleScene = SceneJS.scene({
                         }
                     },
 
-                    /* Socket subgraph traversed - schedule buffered messages for server, start fresh buffer
+
+                    "kd-isect": function(message) {         // Message(s) sent
+                        alert(JSON.stringify(message));
+                    },
+
+                    /* Subgraph traversed - schedule buffered messages for server, start fresh buffer
                      */
                     "rendered" : function() {
                         if (eventBuffer.length > 0) {
@@ -103,30 +112,30 @@ var exampleScene = SceneJS.scene({
         },
 
 
-                SceneJS.lookAt({
+                new SceneJS.LookAt({
                     id: "lookat",
-                    eye : { x: 0, y: 0, z: 50.0 },
+                    eye : { x: 0, y: 0, z: -8.0 },
                     look : { x: 0, y: 0, z: 0 },
                     up : { x: 0, y: 1.0, z: 0 }
                 },
 
                     /* Camera
                      */
-                        SceneJS.camera({
+                        new SceneJS.Camera({
                             id: "camera",
                             optics: {
                                 type: "perspective",
                                 fovy : 45.0,
-                                aspect : 2.0,
+                                aspect : 1.47,
                                 near : 0.10,
                                 far : 80000.0  }
                         },
                             /* Default lights
                              */
-                                SceneJS.node({
+                                new SceneJS.Node({
                                     id: "lights"
                                 },
-                                        SceneJS.light({
+                                        new SceneJS.Light({
                                             sid: "light1",
                                             cfg: {
                                                 type:                   "dir",
@@ -137,7 +146,7 @@ var exampleScene = SceneJS.scene({
                                             }
                                         }),
 
-                                        SceneJS.light({
+                                        new SceneJS.Light({
                                             sid: "light2",
                                             cfg: {
                                                 type:                   "dir",
@@ -147,19 +156,45 @@ var exampleScene = SceneJS.scene({
                                                 dir:                    { x: 2.0, y: 1.0, z: 0.0 }
                                             }
                                         })),
-//                                SceneJS.material({
-//                                    baseColor:      { r: 0.3, g: 0.3, b: 0.9 },
-//                                    specularColor:  { r: 0.9, g: 0.9, b: 0.9 },
-//                                    specular:       0.9,
-//                                    shine:          6.0
-//                                },
-//                                        SceneJS.teapot()),
+                            //                                SceneJS.material({
+                            //                                    baseColor:      { r: 0.3, g: 0.3, b: 0.9 },
+                            //                                    specularColor:  { r: 0.9, g: 0.9, b: 0.9 },
+                            //                                    specular:       0.9,
+                            //                                    shine:          6.0
+                            //                                },
+                            //                                        SceneJS.teapot()),
 
                             /* Mount point for kd-tree
                              */
-                                SceneJS.node({
+                                new SceneJS.Node({
                                     id: "kd-root"
                                 })))));
+
+
+//exampleScene.addNode(
+//        new SceneJS.Node(
+//                new SceneJS.Interpolator({
+//                    target:"lookat",
+//                    targetProperty: "eyeX",
+//                    keys: [0.0, 1.0, 3.5, 3.7, 15.9, 30.0],
+//                    values: [0.0, 10.0, 250.0, 1500.0, 200.0, 20.0]
+//                }),
+//
+//                new SceneJS.Interpolator({
+//                    once: true,
+//                    target:"lookat",
+//                    targetProperty: "eyeZ",
+//                    keys: [0.0, 1.0, 3.5, 3.7, 15.9, 30.0],
+//                    values: [0.0, 10.0, 450.0, 150.0, 300.0, -20.0]
+//                }),
+//
+//                new SceneJS.Interpolator({
+//                    once: true,
+//                    target:"lookat",
+//                    targetProperty: "eyeY",
+//                    keys: [0.0, 1.0, 3.5, 3.7, 15.9, 30.0],
+//                    values: [0.0, 10.0, 150.0, 50.0, -200.0, 20.0]
+//                })));
 
 /*----------------------------------------------------------------------
  * Scene rendering loop and mouse handler stuff follows

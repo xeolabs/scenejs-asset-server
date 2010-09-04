@@ -842,7 +842,7 @@ exports.getAsset = function(params, cb) {
                                                 } else {
                                                     cb({
                                                         format : "script",
-                                                        body:  JSON.stringify(postProcess(assetMeta, assetBody))
+                                                        body:  JSON.stringify(postProcess(assetMeta, assetBody, params))
                                                     });
                                                 }
                                             });
@@ -854,14 +854,15 @@ exports.getAsset = function(params, cb) {
 
 function postProcess(assetMeta, assetBody, params) {
     var node = assetBody.rootNode;
-    if (assetBody.constructor) {
-        var context = {};
-        node = assetBody.constructor({
-            context: context,
-            params: params,
-            node: node
-        });
-    }
+//    if (assetBody.constructor) {
+//        var context = {};
+//        node = assetBody.constructor({
+//            context: context,
+//            params: params,
+//            node: node
+//        });
+//    }
+    log(JSON.stringify(assetMeta.attachments))
     if (assetMeta.attachments.dirName) {
         fixAssetImageURLs(node, settings.attachmentsBaseURL + "/" + assetMeta.attachments.dirName);
     }

@@ -254,28 +254,8 @@ function getAssetIdsInSubtree(node, assetIds) {
  *--------------------------------------------------------------------------------------------------------------------*/
 exports.getAssetMap = function(params, cb) {
     log("SceneServer.AssetMap: getAssetMap");
-    cb({ body: kdTree });
-};
-
-/*----------------------------------------------------------------------------------------------------------------------
- * Returns JSON (sub)graph of SceneJS.KDNodes, either for entire kd-tree of a portion of it
- *
- *   - subgraph is attached to given parent scene node
- *   - subgraph is returned in a "cfg-node" message
- *   - if a spatial region is given then the subgraph contains those kd-map nodes intersecting it
- *   - if a kd-node ID is given then the subgraph contains those kd-nodes beneath that
- *--------------------------------------------------------------------------------------------------------------------*/
-exports.getKDGraph = function(params, cb) {
-    if (!params.parentNodeID) {
-        cb({ error: 500, body: "getKDGraph.parentNodeID missing" });
-        return;
-    }
-
     var root;
-    if (params.boundary) {
-
-        /* Get subgraph of KDNodes for a bounded section of the kd-tree
-         */
+    if (params.boundary) { // Get subgraph of KDNodes for a bounded section of the kd-tree
         var boundary = params.boundary;
         if (!boundary.xmin || !boundary.ymin || !boundary.xmin || !boundary.xmax || !boundary.ymax || !boundary.zmax) {
             cb({ error: 500, body: "getKDGraph.boundary is incomplete" });
@@ -285,36 +265,15 @@ exports.getKDGraph = function(params, cb) {
             cb({ error: 500, body: "getKDGraph.boundary is inside-out" });
             return;
         }
-        log("SceneServer.AssetMap: getKDGraph boundary=" + JSON.stringify(boundary));
-
         root = findIsectNode(null, kdTree, boundary);
 
     } else if (params.kdNodeID) {
-        log("SceneServer.AssetMap: getKDGraph kdNodeID=" + params.kdNodeID);
-
         root = kdNodes[params.kdNodeID];
-
     } else {
         root = kdTree;
-        log("SceneServer.AssetMap: getKDGraph");
     }
-
-    var messages = [
-        {
-            name: "cfg-node",
-            params: {
-                nodeID: params.parentNodeID,
-                config: {
-                    "+node": buildKDGraph(root) // TODO: cache KDNodes
-                }
-            }
-        }
-    ];
-    var json = JSON.stringify(messages);
-    log(json)
     cb({
-        format : "json",
-        body: json
+        body: root
     });
 };
 
@@ -348,118 +307,6 @@ function findIsectNode(parent, node, boundary) {
             }
     }
 }
-
-function buildKDGraph(node) {
-    var sceneNode = {
-        type: "kdnode",
-        id: node.id,
-        cfg: {
-            //            hasAssets: (node.assets && node.assets.length > 0),
-            isVisible : true,
-            assets: (node.assets && node.assets.length > 0) ? node.assets : undefined,
-            xmin: node.boundary.xmin,
-            ymin: node.boundary.ymin,
-            zmin: node.boundary.zmin,
-            xmax: node.boundary.xmax,
-            ymax: node.boundary.ymax,
-            zmax: node.boundary.zmax
-        },
-        nodes: []
-    };
-    if (node.leftChild) {
-        sceneNode.nodes = [
-            buildKDGraph(node.leftChild)
-        ];
-    }
-    if (node.rightChild) {
-        if (!sceneNode.nodes) {
-            sceneNode.nodes = [];
-        }
-        sceneNode.nodes.push(buildKDGraph(node.rightChild));
-    }
-    return sceneNode;
-}
-
-exports.clientMessages = function(params, cb) {
-    if (!params.messages) {
-        cb({ error: 500, body: "clientMessages.messages missing" });
-        return;
-    }
-    const SERVER_URL = "http://" + settings.host + ":" + settings.port;
-
-    log("SceneServer.AssetMap: clientMessages " + params.messages.length);
-
-    var messages = [];
-
-    /* Process each message
-     */
-    var len = params.messages.length;
-    var message;
-    for (var i = 0; i < len; i++) {
-        message = params.messages[i];
-        if (!message.cmd) {
-            cb({ error: 500, body: "clientMessages - message cmd missing" });
-            return;
-        }
-        message.params = message.params || {};
-        switch (message.cmd) {
-            case "getAssetMap" :
-                getMap(params,
-                        function(result) {
-                            if (result.error) {
-                                cb(result);
-                                return;
-                            }
-                            messages.push({
-                                cmd: "assetMap",
-                                params: {
-                                    nodeID: message.params.nodeID,
-                                    map: result.body
-                                }
-                            });
-                        });
-                break;
-
-            default:
-                cb({
-                    error: 500,
-                    body: "clientMessages - unsupported message: " + message.cmd
-                });
-                return;
-        }
-    }
-    var json = JSON.stringify(messages);
-    cb({
-        format : "json",
-        body: json
-    });
-};
-
-function getMap(params, cb) {
-    log("^^^^^^^^^^^^^^^^^ getMap");
-    var root;
-    if (params.boundary) { // Get subgraph of KDNodes for a bounded section of the kd-tree
-        var boundary = params.boundary;
-        if (!boundary.xmin || !boundary.ymin || !boundary.xmin || !boundary.xmax || !boundary.ymax || !boundary.zmax) {
-            cb({ error: 500, body: "getKDGraph.boundary is incomplete" });
-            return;
-        }
-        if (boundary.xmin > boundary.xmax || boundary.ymin > boundary.ymax || boundary.zmin > boundary.zmax) {
-            cb({ error: 500, body: "getKDGraph.boundary is inside-out" });
-            return;
-        }
-        root = findIsectNode(null, kdTree, boundary);
-
-    } else if (params.kdNodeID) {
-        root = kdNodes[params.kdNodeID];
-    } else {
-        root = kdTree;
-    }
-    cb({
-        body: root
-    });
-}
-;
 
 /*---------------------------------------------------------------------------------------------------------------------
  * Inserts an asset into the Asset Map

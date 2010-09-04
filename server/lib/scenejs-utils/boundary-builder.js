@@ -97,7 +97,7 @@ function expandBoundary(e, positions) {
         var y = p[i + 1];
         var z = p[i + 2];
 
-        if (x != null && y != null && z != null) {
+        if (x != null && y != null && z != null && x != undefined && y != undefined && z != undefined) {
             if (x < e.xmin) e.xmin = x;
             if (y < e.ymin) e.ymin = y;
             if (z < e.zmin) e.zmin = z;
