@@ -14,7 +14,8 @@
 
         </div>
         <div id="header-inner">
-            <h1><a href="http://scenejs.org">SceneJS</a>&nbsp;&gt;&nbsp;<a href="../../index.html">Asset Server</a>&nbsp;&gt;&nbsp;getAsset Demo
+            <h1><a href="http://scenejs.org">SceneJS</a>&nbsp;&gt;&nbsp;<a href="../../index.html">Asset Server</a>&nbsp;&gt;&nbsp;getAsset
+                Demo
             </h1>
             <a class="a2a_dd" href="http://www.addtoany.com/share_save?linkname=s&amp;linkurl=s"><img
                     src="http://static.addtoany.com/buttons/share_save_171_16.png" width="171" height="16" border="0"
@@ -42,10 +43,20 @@
                 from the response. Go one step further and specify "var myNode=SceneJS.createNode" as the callback, and
                 you'll get your asset as a SceneJS node object called "myNode". </p>
             <br/>
-            <ul>
-                <li><a target="_other" href="scene-def.js">Client scene graph source code</a></li>
-                <li><a target="_other" href="http://scenejs.wikispaces.com/Asset+Server">Asset Server API Docs</a></li>
-            </ul>
+
+            <p>The following script tag is all that's needed to load this airplane:</p><br/>
+            <code><pre>&lt;script src="http://assets.scenejs.org/api/v1/?cmd=getAsset \\
+    &id=org.scenejs.examples.collada.seymourplane \\
+    &callback=var%20seymourPlane=SceneJS.createNode"
+       type="text/javascript"&gt;&lt;/script&gt;
+            </pre>
+                <br/>
+
+                <ul>
+                    <li><a target="_other" href="scene-def.js">Client scene graph source code</a></li>
+                    <li><a target="_other" href="http://scenejs.wikispaces.com/Asset+Server">Asset Server API Docs</a>
+                    </li>
+                </ul>
         </div>
         <div id="log">
             <h3>Log</h3>
